@@ -1,0 +1,136 @@
+---
+title: >
+  Supplementary Information for the `r BiocStyle::Biocpkg("GeneTonic")` package
+author:
+- name: Federico Marini
+  affiliation: 
+  - &id1 Institute of Medical Biostatistics, Epidemiology and Informatics (IMBEI), Mainz
+  email: marinif@uni-mainz.de
+- name: Annekathrin Ludt
+  affiliation: 
+  - *id1
+- name: Jan Linke
+  affiliation: 
+  - *id1
+- name: Konstantin Strauch
+  affiliation: 
+  - *id1
+
+# date: "`r BiocStyle::doc_date()`"
+package: "`r BiocStyle::pkg_ver('GeneTonic')`"
+output: 
+  bookdown::html_document2:
+    theme: cosmo
+    number_sections: false
+    # toc: true
+    # toc_float: true
+    # code_folding: show
+    # code_download: true
+
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+    collapse = TRUE,
+    comment = "#",
+    error = FALSE,
+    warning = FALSE,
+    message = FALSE,
+    echo = FALSE
+)
+```
+
+<style type="text/css">
+div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 20px;}
+</style>
+
+<br><br><br>
+
+## Table S1: Additional File 1
+
+Table S1 contains the comparison of tools for assisting the intepretation of transcriptome data via functional enrichment analyses.
+
+The explanations for the assessment criteria are provided below.
+
+<br><br>
+
+```{r}
+library(DT)
+library(magrittr)
+s1 <- readxl::read_xlsx("s1table.xlsx")
+s1_key <- readxl::read_xlsx("s1table_key.xlsx")
+```
+
+```{r}
+# making tool names bold
+## this is controlled later via formatStyle
+
+# making links links
+make_links <- function(val) {
+  if(is.na(val)) {
+    return(val)
+  } else {
+    val_linked <- paste0('<a href=',
+                         val,
+                         ' target="_blank">',
+                         val,
+                         '</a>')
+    return(val_linked)
+  }
+}
+
+s1$link_source <- sapply(s1$link_source, function(arg) make_links(arg)) 
+s1$doi_manuscript <- sapply(s1$doi_manuscript, function(arg) make_links(arg))
+s1$project_homepage <- sapply(s1$project_homepage, function(arg) make_links(arg))
+```
+
+```{r}
+DT::datatable(
+  s1,
+  rownames = FALSE,
+  escape = FALSE,
+  extensions = "FixedColumns",
+  options = list(
+    pageLength = 50,
+    scrollX = TRUE,
+    fixedColumns = list(leftColumns = 1),
+    autoWidth = TRUE)
+) %>% 
+  formatStyle(
+    'tool_name',  
+    color = 'steelblue',
+    backgroundColor = 'lightgreen',
+    fontWeight = 'bold') 
+```
+
+<div class = "blue">
+<details><summary>Here is the key with the different criteria explained</summary>
+<p>
+
+```{r}
+knitr::kable(s1_key)
+```
+
+</p>
+</details>
+</div>
+
+## Misc
+
+The content of this document has been generated based on the code available at the repository
+https://github.com/federicomarini/GeneTonic_supplement.
+
+The information in the tables above are extracted from a Google Sheet, available at https://docs.google.com/spreadsheets/d/167XV0w18P0FSld1dt6owN4C2Esxl5FU2QTo4D-wclz0/edit?usp=sharing.
+
+The last update to the Sheet (and to this document) has been done on `r Sys.Date()`.
+
+The links included in the table have been validated with `awesome_bot` (https://github.com/dkhamsing/awesome_bot).
+
+## Contact info {-}
+
+Is some information not completely correct or up to date?<br>
+Do you want to insert an additional tool into the table?
+
+Please contact Federico Marini (marinif@uni-mainz.de) with a detailed report or suggest the changes in the Google Sheet.
+
+<br><br><br><br><br><br><br>
