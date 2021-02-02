@@ -1,0 +1,104 @@
+---
+title: >
+  Supplementary Information for the `r BiocStyle::Biocpkg("GeneTonic")` package
+subtitle: > 
+  Preprocessing steps and validation checks
+author:
+- name: Federico Marini
+  affiliation: 
+  - &id1 Institute of Medical Biostatistics, Epidemiology and Informatics (IMBEI), Mainz
+  email: marinif@uni-mainz.de
+- name: Annekathrin Ludt
+  affiliation: 
+  - *id1
+- name: Jan Linke
+  affiliation: 
+  - *id1
+- name: Konstantin Strauch
+  affiliation: 
+  - *id1
+
+# date: "`r BiocStyle::doc_date()`"
+package: "`r BiocStyle::pkg_ver('GeneTonic')`"
+output: 
+  bookdown::html_document2:
+    number_sections: false
+    theme: cosmo
+    # toc: true
+    # toc_float: true
+    # code_folding: show
+    # code_download: true
+
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+    collapse = TRUE,
+    comment = "#",
+    error = FALSE,
+    warning = FALSE,
+    message = FALSE
+)
+```
+
+## Data preparation
+
+The information on the software comparison is available online at https://docs.google.com/spreadsheets/d/167XV0w18P0FSld1dt6owN4C2Esxl5FU2QTo4D-wclz0/edit?usp=sharing.
+
+Reading in the data from the Google Sheet...
+
+```{r}
+library(googlesheets4)
+options(gargle_oauth_email = "fede.maro@gmail.com")
+gs4_auth()
+# sheets_auth(token = drive_token())
+
+# googlesheets4::sheets_find()
+
+gs4_get("1EQD8gNk6NID_8CJ-xetQm31XB4eRCXIsvVd4X0oaoPo")
+```
+
+... and exporting it to Excel format
+
+```{r}
+s1table <- range_read("1EQD8gNk6NID_8CJ-xetQm31XB4eRCXIsvVd4X0oaoPo", 
+                      sheet = "Software_Comparison")
+s1table_key <- range_read("1EQD8gNk6NID_8CJ-xetQm31XB4eRCXIsvVd4X0oaoPo",
+                          sheet = "Criteria_Definition")
+
+drop_criteria <- c(
+  "citation_key",
+  "note: all links to the tools were checked in Feb 2021 via awesome_bot (https://github.com/dkhamsing/awesome_bot)"
+)
+
+s1table <- s1table[,!colnames(s1table) %in% drop_criteria]
+s1table_key <- s1table_key[!s1table_key$Criterium %in% drop_criteria, ]
+
+writexl::write_xlsx(s1table, path = "s1table.xlsx")
+writexl::write_xlsx(s1table_key, path = "s1table_key.xlsx")
+```
+
+## Link validation
+
+Export links as text, to be tested with `awesome_bot`:
+
+```{r}
+writeLines(na.omit(s1table$link_source), "s1text_link_source.txt")
+writeLines(na.omit(s1table$doi_manuscript), "s1text_doi.txt")
+writeLines(na.omit(s1table$project_homepage), "s1text_link_demo_projecthome.txt")
+```
+
+These commands need then to be run with `awesome_bot`
+
+```{}
+awesome_bot s1text_link_source.txt --allow-redirect --allow-ssl --allow-dupe
+awesome_bot s1text_doi.txt --allow-redirect --allow-ssl --allow-dupe
+awesome_bot s1text_link_demo_projecthome.txt --allow-redirect --allow-ssl --allow-dupe
+```
+
+## Session Info
+
+```{r}
+sessionInfo()
+```
+
