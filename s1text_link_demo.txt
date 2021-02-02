@@ -1,0 +1,16 @@
+https://ics.hutton.ac.uk/3drnaseq
+https://asap.epfl.ch
+https://yanli.shinyapps.io/DEApp/
+http://degust.erc.monash.edu/degust/compare.html?code=example
+http://dredge.bio.unc.edu/human-neuronal-tissue, http://dredge.bio.unc.edu/mouse-embryonic-tissue/, http://dredge.bio.unc.edu/c-elegans-timecourse/
+http://renlab.org:3838/IDEA/
+http://shiny.imbei.uni-mainz.de:3838/ideal
+http://www.uusmb.unam.mx/ideamex/
+http://ge-lab.org/idep/
+http://bmbl.sdstate.edu/IRIS/
+http://microscopebioinformatics.org/
+http://shiny.imbei.uni-mainz.de:3838/pcaExplorer
+https://pinin4fjords.shinyapps.io/shinyngs_example/
+https://kcvi.shinyapps.io/START/
+https://infinityloop.shinyapps.io/TCC-GUI/
+http://loosolab.mpi-bn.mpg.de/apps/wilson/
