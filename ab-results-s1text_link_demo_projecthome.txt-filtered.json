@@ -1,0 +1,9 @@
+[
+  {
+    "loc": 2,
+    "status": -1,
+    "link": "http://aegis.stanford.edu/",
+    "redirect": "",
+    "error": "Failed to open TCP connection to aegis.stanford.edu:80 (getaddrinfo: nodename nor servname provided, or not known)"
+  }
+]
