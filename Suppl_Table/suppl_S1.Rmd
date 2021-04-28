@@ -4,7 +4,8 @@ title: >
 author:
 - name: Federico Marini
   affiliation: 
-  - &id1 Institute of Medical Biostatistics, Epidemiology and Informatics (IMBEI), Mainz
+  - &id1 Institute of Medical Biostatistics, Epidemiology and Informatics (IMBEI), Mainz<br>
+  - &id2 Center for Thrombosis and Hemostasis (CTH), Mainz<br>
   email: marinif@uni-mainz.de
 - name: Annekathrin Ludt
   affiliation: 
@@ -12,6 +13,7 @@ author:
 - name: Jan Linke
   affiliation: 
   - *id1
+  - *id2
 - name: Konstantin Strauch
   affiliation: 
   - *id1
