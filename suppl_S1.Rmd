@@ -16,7 +16,6 @@ author:
   affiliation: 
   - *id1
 
-# date: "`r BiocStyle::doc_date()`"
 package: "`r BiocStyle::pkg_ver('GeneTonic')`"
 output: 
   bookdown::html_document2:
@@ -31,12 +30,12 @@ output:
 
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(
-    collapse = TRUE,
-    comment = "#",
-    error = FALSE,
-    warning = FALSE,
-    message = FALSE,
-    echo = FALSE
+  collapse = TRUE,
+  comment = "#",
+  error = FALSE,
+  warning = FALSE,
+  message = FALSE,
+  echo = FALSE
 )
 ```
 
