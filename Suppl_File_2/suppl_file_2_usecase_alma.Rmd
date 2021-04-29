@@ -1,0 +1,331 @@
+---
+title: >
+  Using GeneTonic on the A20-deficient microglia dataset (GSE123033)
+author:
+- name: Federico Marini
+  affiliation: 
+  - &id1 Institute of Medical Biostatistics, Epidemiology and Informatics (IMBEI), Mainz<br>
+  - &id2 Center for Thrombosis and Hemostasis (CTH), Mainz<br>
+  email: marinif@uni-mainz.de
+- name: Annekathrin Ludt
+  affiliation: 
+  - *id1
+- name: Jan Linke
+  affiliation: 
+  - *id1
+  - *id2
+- name: Konstantin Strauch
+  affiliation: 
+  - *id1
+
+date: "`r BiocStyle::doc_date()`"
+package: "`r BiocStyle::pkg_ver('ideal')`"
+output: 
+  bookdown::html_document2:
+    toc: true
+    toc_float: true
+    theme: cosmo
+    code_folding: show
+    code_download: true
+editor_options: 
+  chunk_output_type: console
+link-citations: true
+bibliography: "../genetonic_supplement.bib"
+---
+
+```{r setup, include=FALSE, cache=FALSE, eval = TRUE, echo = FALSE}
+library("knitr")
+opts_chunk$set(
+  fig.align = "center",
+  fig.show = "asis",
+  eval = TRUE,
+  fig.width = 10,
+  fig.height = 7,
+  tidy = FALSE,
+  message = FALSE,
+  warning = FALSE,
+  size = "small",
+  comment = "##",
+  echo = TRUE,
+  results = "markup"
+)
+options(replace.assign = TRUE, width = 80)
+```
+
+# About the data
+
+The data illustrated in this document is an RNA-seq dataset, available at the GEO repository under the accession code GSE123033 (https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE123033).  
+This was generated as a part of the work to elucidate the role of microglial A20 in maintaining brain homeostasis, comparing fully deficient to partially deficient microglia tissue [@Mohebiany2020] - the manuscript is available at https://www.sciencedirect.com/science/article/pii/S2211124719317620.
+
+# Loading required packages
+
+We load the packages required to perform all the analytic steps presented in this document.
+
+```{r loadLibraries, results='hide'}
+library("DESeq2")
+library("topGO")
+library("pheatmap")
+library("org.Mm.eg.db")
+library("pcaExplorer")
+library("ideal")
+library("DT")
+library("GeneTonic")
+```
+
+# Data processing
+
+After obtaining a count matrix (via STAR and featureCounts), we generated a `DESeqDataset` object, provided in this repository for the ease of reproducing the presented analyses.
+
+## Exploratory data analyisis
+
+We read in the dataset, apply the rlog transformation for performing PCA and creating a heatmap of the sample to sample distances.  
+We'll use some functions from the `pcaExplorer` package [@Marini2019].
+
+```{r eda-alma}
+dds_alma <- readRDS("usecase_dds_alma.rds")
+dds_alma
+
+rld_alma <- rlogTransformation(dds_alma)
+
+anno_df <- readRDS("usecase_annodf_alma.rds")
+
+pheatmap::pheatmap(as.matrix(dist(t(assay(rld_alma)))))
+
+pcaExplorer::pcaplot(rld_alma,
+  ntop = 5000,
+  title = "PCA - top5000 most variable genes",
+  ellipse = FALSE
+)
+```
+
+## Differential expression analysis
+
+We set the False Discovery Rate to 0.05 and we run the `DESeq2` workflow, generating results and using the `apeglm` shrinkage estimator.  
+We plot the results as an MA-plot and report them in a table, using the functions from the `ideal` package [@Marini2020].
+
+```{r de-alma}
+FDR <- 0.05
+
+dds_alma <- DESeq(dds_alma)
+
+res_alma_ko_vs_ctrl <- results(dds_alma, name = "condition_ko_del_vs_control", alpha = FDR)
+summary(res_alma_ko_vs_ctrl)
+library("apeglm")
+res_alma_ko_vs_ctrl <- lfcShrink(dds_alma, coef = "condition_ko_del_vs_control", type = "apeglm", res = res_alma_ko_vs_ctrl)
+
+res_alma_ko_vs_ctrl$SYMBOL <- anno_df$gene_name[match(rownames(res_alma_ko_vs_ctrl), anno_df$gene_id)]
+
+summary(res_alma_ko_vs_ctrl)
+
+# saveRDS(res_alma_ko_vs_ctrl, file = "usecase_res_de_alma.rds")
+
+ideal::plot_ma(res_alma_ko_vs_ctrl, ylim = c(-5, 5), title = "MAplot - A20ko vs Ctrl")
+
+tbl_DEres_alma_ko_vs_ctrl <- deseqresult2df(res_alma_ko_vs_ctrl, FDR = FDR)
+
+DT::datatable(tbl_DEres_alma_ko_vs_ctrl, rownames = FALSE)
+```
+
+## Functional enrichment analysis
+
+We perform functional enrichment analysis, here using the `topGOtable` wrapper to the method implemented in the `topGO` package.
+
+```{r enrich-alma, cache=TRUE}
+expressedInAssay <- (rowSums(assay(dds_alma)) > 0)
+geneUniverseExprENS <- rownames(dds_alma)[expressedInAssay]
+geneUniverseExpr <- anno_df$gene_name[match(geneUniverseExprENS, anno_df$gene_id)]
+
+GObps_ko_vs_ctrl <- topGOtable(
+  DEgenes = tbl_DEres_alma_ko_vs_ctrl$SYMBOL,
+  BGgenes = geneUniverseExpr,
+  ontology = "BP",
+  geneID = "symbol",
+  addGeneToTerms = TRUE,
+  mapping = "org.Mm.eg.db",
+  topTablerows = 500
+)
+
+GOmfs_ko_vs_ctrl <- topGOtable(
+  DEgenes = tbl_DEres_alma_ko_vs_ctrl$SYMBOL,
+  BGgenes = geneUniverseExpr,
+  ontology = "MF",
+  geneID = "symbol",
+  addGeneToTerms = TRUE,
+  mapping = "org.Mm.eg.db",
+  topTablerows = 500
+)
+
+GOccs_ko_vs_ctrl <- topGOtable(
+  DEgenes = tbl_DEres_alma_ko_vs_ctrl$SYMBOL,
+  BGgenes = geneUniverseExpr,
+  ontology = "CC",
+  geneID = "symbol",
+  addGeneToTerms = TRUE,
+  mapping = "org.Mm.eg.db",
+  topTablerows = 500
+)
+
+res_enrich <- shake_topGOtableResult(GObps_ko_vs_ctrl)
+res_enrich <- get_aggrscores(
+  res_enrich = res_enrich,
+  res_de = res_alma_ko_vs_ctrl,
+  annotation_obj = anno_df
+)
+
+# saveRDS(res_enrich, file = "usecase_res_enrich_alma.rds")
+
+DT::datatable(res_enrich, rownames = FALSE)
+```
+
+### Using alternative enrichment analysis methods
+
+It is possible to use the output of different other methods for enrichment analysis, thanks to the `shaker_*` functions implemented in `GeneTonic` - see for example `?shake_topGOtableResult`, and navigate to the manual pages for the other functions listed in the "See Also" section.
+
+`GeneTonic` is able to convert for you the output of
+
+- DAVID (text file, downloaded from the DAVID website)
+- clusterProfiler (takes `enrichResult` objects)
+- enrichr (a data.frame with the output of `enrichr`, or the text file exported from Enrichr)
+- fgsea (the output of `fgsea()` function)
+- g:Profiler (the text file output as exported from g:Profiler, or a data.frame with the output of `gost()` in `gprofiler2`)
+
+Some examples on how to use them are reported here:
+
+```{r, eval=FALSE}
+# clusterProfiler --------------------------------------------------------------
+library("clusterProfiler")
+degenes_alma <- deseqresult2df(res_alma_ko_vs_ctrl, FDR = 0.05)$id
+ego_alma <- enrichGO(gene          = degenes_alma,
+                     universe      = rownames(dds_alma)[expressedInAssay],
+                     OrgDb         = org.Mm.eg.db,
+                     ont           = "BP",
+                     keyType       = 'ENSEMBL',
+                     pAdjustMethod = "BH",
+                     pvalueCutoff  = 0.01,
+                     qvalueCutoff  = 0.05,
+                     readable      = TRUE)
+res_enrich_clusterprofiler <- shake_enrichResult(ego_alma)
+
+# g:profiler -------------------------------------------------------------------
+library("gprofiler2")
+degenes <- deseqresult2df(res_alma_ko_vs_ctrl, FDR = 0.05)$SYMBOL
+gostres_a20 <- gost(
+  query = degenes, 
+  ordered_query = FALSE, 
+  multi_query = FALSE, 
+  significant = FALSE, 
+  exclude_iea = TRUE, 
+  measure_underrepresentation = FALSE, 
+  evcodes = TRUE, 
+  user_threshold = 0.05, 
+  correction_method = "g_SCS", 
+  domain_scope = "annotated", 
+  numeric_ns = "", 
+  sources = "GO:BP", 
+  as_short_link = FALSE)
+
+res_enrich_gprofiler <- shake_gprofilerResult(gprofiler_output = gostres_a20$result)
+
+# fgsea ------------------------------------------------------------------------
+library("dplyr")
+library("tibble")
+library("fgsea")
+library("msigdbr")
+res2 <- res_alma_ko_vs_ctrl %>%
+  as.data.frame() %>% 
+  dplyr::select(SYMBOL, log2FoldChange)
+de_ranks <- deframe(res2)
+head(de_ranks, 20)
+msigdbr_df <- msigdbr(species = "Mus musculus", category = "C5", subcategory = "BP")
+msigdbr_list = split(x = msigdbr_df$gene_symbol, f = msigdbr_df$gs_name)
+fgseaRes <- fgsea(pathways = msigdbr_list, 
+                  stats = de_ranks, 
+                  nperm=100000)
+fgseaRes <- fgseaRes %>% 
+  arrange(desc(NES))
+
+res_enrich_fgsea <- shake_fgseaResult(fgsea_output = fgseaRes)
+
+# enrichr ----------------------------------------------------------------------
+library("enrichR")
+dbs <- c("GO_Molecular_Function_2018",
+         "GO_Cellular_Component_2018",
+         "GO_Biological_Process_2018",
+         "KEGG_2019_Human",
+         "Reactome_2016",
+         "WikiPathways_2019_Human")
+degenes <- (deseqresult2df(res_alma_ko_vs_ctrl, FDR = 0.05)$SYMBOL)
+enrichr_output_a20 <- enrichr(degenes, dbs)
+
+res_enrich_enrichr_BPs <- shake_enrichrResult(
+  enrichr_output = enrichr_output_a20$GO_Biological_Process_2018)
+res_enrich_enrichr_KEGG <- shake_enrichrResult(
+  enrichr_output = enrichr_output_a20$KEGG_2019_Human)
+```
+
+## Assembling the `gtl` object
+
+To simplify the usage of the function from `GeneTonic`, we create a `GeneTonic_list` object
+
+```{r}
+gtl_alma <- GeneTonic_list(
+  dds = dds_alma,
+  res_de = res_alma_ko_vs_ctrl,
+  res_enrich = res_enrich,
+  annotation_obj = anno_df
+)
+
+# saveRDS(gtl_alma, "gtl_alma.rds")
+```
+
+# Running `GeneTonic` on the dataset
+
+Let's load the `GeneTonicList` object, containing all the structured input needed.
+
+```{r}
+gtl_alma <- readRDS("gtl_alma.rds")
+```
+
+## `GeneTonic`, interactively
+
+This command will launch the `GeneTonic` app:
+
+```{r eval=FALSE}
+GeneTonic(gtl = gtl_alma)
+```
+
+The exploration can be guided by launching the introductory tours for each section of the app, and finally one can generate a small report focused on the features and genesets of interest.
+
+If some more custom visualizations are required, it is possible to export the objects in use from the app as a SummarizedExperiment object, to be then passed to the `iSEE` software [@Rue-Albrecht2018] for further exploration.
+
+## Using `GeneTonic`'s functions in analysis reports 
+
+The functionality of `GeneTonic` can be used also as standalone functions, to be called for example in existing analysis reports in RMarkdown, or R scripts.  
+In the following chunks, we show how it is possible to call some of the functions on the A20-deficient microglia set.
+
+```{r}
+em <- enrichment_map(gtl = gtl_alma, n_gs = 100)
+
+library("visNetwork")
+library("magrittr")
+em %>%
+  visIgraph() %>%
+  visOptions(
+    highlightNearest = list(
+      enabled = TRUE,
+      degree = 1,
+      hover = TRUE
+    ),
+    nodesIdSelection = TRUE
+  )
+```
+
+
+
+# Session information {-}
+
+```{r}
+sessionInfo()
+```
+
+# Bibliography {-}
