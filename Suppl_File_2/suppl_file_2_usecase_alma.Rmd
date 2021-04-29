@@ -165,16 +165,16 @@ GOccs_ko_vs_ctrl <- topGOtable(
   topTablerows = 500
 )
 
-res_enrich <- shake_topGOtableResult(GObps_ko_vs_ctrl)
-res_enrich <- get_aggrscores(
-  res_enrich = res_enrich,
+res_enrich_a20 <- shake_topGOtableResult(GObps_ko_vs_ctrl)
+res_enrich_a20 <- get_aggrscores(
+  res_enrich = res_enrich_a20,
   res_de = res_alma_ko_vs_ctrl,
   annotation_obj = anno_df
 )
 
-# saveRDS(res_enrich, file = "usecase_res_enrich_alma.rds")
+# saveRDS(res_enrich_a20, file = "usecase_res_enrich_alma.rds")
 
-DT::datatable(res_enrich, rownames = FALSE)
+DT::datatable(res_enrich_a20, rownames = FALSE)
 ```
 
 ### Using alternative enrichment analysis methods
@@ -271,7 +271,7 @@ To simplify the usage of the function from `GeneTonic`, we create a `GeneTonic_l
 gtl_alma <- GeneTonic_list(
   dds = dds_alma,
   res_de = res_alma_ko_vs_ctrl,
-  res_enrich = res_enrich,
+  res_enrich = res_enrich_a20,
   annotation_obj = anno_df
 )
 
@@ -303,6 +303,89 @@ If some more custom visualizations are required, it is possible to export the ob
 The functionality of `GeneTonic` can be used also as standalone functions, to be called for example in existing analysis reports in RMarkdown, or R scripts.  
 In the following chunks, we show how it is possible to call some of the functions on the A20-deficient microglia set.
 
+For more details on the functions and their outputs, please refer to the package documentation and the vignette.
+
+### Genesets and genes
+
+We can represent the relationships between genesets and genes with `enhance_table()`, `gs_summary_heat()`, and `ggs_graph()`:
+
+```{r}
+p <- enhance_table(gtl = gtl_alma,
+                   n_gs = 30,
+                   chars_limit = 60)
+p
+
+## could be made interactive with...
+# library("plotly")
+# ggplotly(p)
+
+gs_summary_heat(gtl = gtl_alma,
+                n_gs = 5)
+
+
+ggs <- ggs_graph(gtl = gtl_alma,
+                 n_gs = 20)
+ggs
+## could be viewed interactively with
+library("visNetwork")
+library("magrittr")
+ggs %>%
+  visIgraph() %>%
+  visOptions(highlightNearest = list(enabled = TRUE,
+                                     degree = 1,
+                                     hover = TRUE),
+             nodesIdSelection = TRUE)
+```
+
+### Overview representations
+
+We can also obtain summary representations of the enrichment results, either as table-like views (with `gs_volcano()`, `gs_summary_overview()`, `gs_fuzzyclustering()`, `gs_scoresheat()`), or to represent the relationships among genesets (via `enrichment_map()`, `gs_dendro()`, `gs_mds()`)
+
+```{r}
+gs_volcano(res_enrich = res_enrich_a20,
+           p_threshold = 0.05,
+           color_by = "aggr_score",
+           volcano_labels = 5,
+           gs_ids = c("GO:0033690", "GO:0050770"),
+           plot_title = "A20-microglia geneset volcano")
+
+gs_summary_overview(res_enrich = res_enrich_a20,
+                    n_gs = 60,
+                    p_value_column = "gs_pvalue",
+                    color_by = "z_score")
+
+res_enrich_subset <- res_enrich_a20[1:200,]
+fuzzy_subset <- gs_fuzzyclustering(
+  res_enrich = res_enrich_subset,
+  n_gs = nrow(res_enrich_subset),
+  gs_ids = NULL,
+  similarity_matrix = NULL,
+  similarity_threshold = 0.35,
+  fuzzy_seeding_initial_neighbors = 3,
+  fuzzy_multilinkage_rule = 0.5)
+
+# show all genesets members of the first cluster
+DT::datatable(
+  fuzzy_subset[fuzzy_subset$gs_fuzzycluster == "1", ]
+)
+
+# list only the representative clusters
+DT::datatable(
+  fuzzy_subset[fuzzy_subset$gs_cluster_status == "Representative", ]
+)
+
+
+vst_alma <- vst(dds_alma)
+scores_mat <- gs_scores(
+  se = vst_alma,
+  gtl = gtl_alma)
+gs_scoresheat(scores_mat,
+              n_gs = 30)
+```
+
+
+
+
 ```{r}
 em <- enrichment_map(gtl = gtl_alma, n_gs = 100)
 
@@ -318,6 +401,91 @@ em %>%
     ),
     nodesIdSelection = TRUE
   )
+
+distilled <- distill_enrichment(gtl = gtl_alma,
+                                n_gs = 100,
+                                cluster_fun = "cluster_markov")
+DT::datatable(distilled$distilled_table)
+DT::datatable(distilled$res_enrich)
+
+dg <- distilled$distilled_em 
+
+library("igraph")
+library("visNetwork")
+library("magrittr")
+
+# defining a color palette for nicer display
+colpal <- colorspace::rainbow_hcl(length(unique(V(dg)$color)))[V(dg)$color]
+V(dg)$color.background <- scales::alpha(colpal, alpha = 0.8)
+V(dg)$color.highlight <- scales::alpha(colpal, alpha = 1)
+V(dg)$color.hover <- scales::alpha(colpal, alpha = 0.5)
+
+V(dg)$color.border <- "black"
+
+visNetwork::visIgraph(dg) %>%
+  visOptions(highlightNearest = list(enabled = TRUE,
+                                     degree = 1,
+                                     hover = TRUE),
+             nodesIdSelection = TRUE, 
+             selectedBy = "membership")
+
+
+
+gs_dendro(gtl = gtl_alma,
+          n_gs = 50,
+          gs_dist_type = "kappa", 
+          clust_method = "ward.D2",
+          color_leaves_by = "z_score",
+          size_leaves_by = "gs_pvalue",
+          color_branches_by = "clusters",
+          create_plot = TRUE)
+
+gs_mds(gtl = gtl_alma,
+       n_gs = 200,
+       gs_ids = NULL,
+       similarity_measure = "kappa_matrix",
+       mds_k = 2,
+       mds_labels = 10,
+       mds_colorby = "z_score",
+       gs_labels = NULL,
+       plot_title = NULL) 
+```
+
+### General use functions
+
+It is possible to obtain focused representations and descriptions of single genesets with `gs_heatmap()`, `go2html()`, and `signature_volcano()` - these need the Gene Ontology identifier to generate the desired content, while the `gtl` object contains all the necessary expression matrices and tables.
+
+```{r}
+gs_heatmap(se = vst_alma,
+           gtl = gtl_alma,
+           geneset_id = "GO:0060337"  ,
+           cluster_columns = TRUE,
+           anno_col_info = "condition"
+)
+
+go_2_html("GO:0060337",
+          res_enrich = res_enrich_a20)
+
+signature_volcano(gtl = gtl_alma,
+                  geneset_id = "GO:0060337",
+                  FDR = 0.05,
+                  color = "#1a81c2"
+)
+```
+
+### Integrated reporting
+
+The reporting functionality of `happy_hour()` can be called anytime also from the command line, focusing on a subset of genes and genesets of interest, which will be presented with additional detail in the output document.
+
+```{r happyhour, eval=FALSE}
+happy_hour(gtl = gtl_alma,
+           project_id = "a20-microglia",
+           mygenesets = res_enrich_a20$gs_id[c(1:5,11,31)],
+           mygenes = c("ENSMUSG00000035042",
+                       "ENSMUSG00000074896",
+                       "ENSMUSG00000035929"),
+           open_after_creating = TRUE
+)
 ```
 
 
