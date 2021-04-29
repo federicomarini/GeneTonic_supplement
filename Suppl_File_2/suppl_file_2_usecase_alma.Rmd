@@ -79,7 +79,7 @@ After obtaining a count matrix (via STAR and featureCounts), we generated a `DES
 ## Exploratory data analyisis
 
 We read in the dataset, apply the rlog transformation for performing PCA and creating a heatmap of the sample to sample distances.  
-We'll use some functions from the `pcaExplorer` package [@Marini2019].
+We'll use some functions from the `pcaExplorer` package [@Marini2019] (see also Supplementary Figure 3 of [@Mohebiany2020]).
 
 ```{r eda-alma}
 dds_alma <- readRDS("usecase_dds_alma.rds")
@@ -101,7 +101,7 @@ pcaExplorer::pcaplot(rld_alma,
 ## Differential expression analysis
 
 We set the False Discovery Rate to 0.05 and we run the `DESeq2` workflow, generating results and using the `apeglm` shrinkage estimator.  
-We plot the results as an MA-plot and report them in a table, using the functions from the `ideal` package [@Marini2020].
+We plot the results as an MA-plot and report them in a table, using the functions from the `ideal` package [@Marini2020] (see also Supplementary Figure 3 of [@Mohebiany2020]).
 
 ```{r de-alma}
 FDR <- 0.05
@@ -473,6 +473,45 @@ signature_volcano(gtl = gtl_alma,
 )
 ```
 
+As an example, these plots are related to the data presented in Figure 3 of [@Mohebiany2020].
+
+```{r}
+genes_synapse_assembly <- c(
+  "Bhlhb9",
+  "Mef2c",
+  "Clstn1",
+  "Amigo1",
+  "Eef2k",
+  "Ephb3",
+  "Thbs2",
+  "Pdlim5"
+)
+
+genes_synapse_assembly_ensids <- 
+  anno_df$gene_id[match(genes_synapse_assembly, anno_df$gene_name)]
+
+gs_heatmap(se = vst_alma,
+           gtl = gtl_alma,
+           genelist = genes_synapse_assembly_ensids,
+           cluster_columns = TRUE,
+           cluster_rows = FALSE,
+           anno_col_info = "condition"
+)
+
+
+res_enrich_a20[res_enrich_a20$gs_id == "GO:0051607",]
+
+gs_heatmap(se = vst_alma,
+           gtl = gtl_alma,
+           geneset_id = "GO:0051607",
+           cluster_columns = TRUE,
+           anno_col_info = "condition"
+)
+
+
+```
+
+
 ### Integrated reporting
 
 The reporting functionality of `happy_hour()` can be called anytime also from the command line, focusing on a subset of genes and genesets of interest, which will be presented with additional detail in the output document.
@@ -480,7 +519,10 @@ The reporting functionality of `happy_hour()` can be called anytime also from th
 ```{r happyhour, eval=FALSE}
 happy_hour(gtl = gtl_alma,
            project_id = "a20-microglia",
-           mygenesets = res_enrich_a20$gs_id[c(1:5,11,31)],
+           mygenesets = c(res_enrich_a20$gs_id[c(1:5,11,31)],
+                          # additionally selecting some by id
+                          "GO:0051963" # regulation of synapse assembly
+                          )
            mygenes = c("ENSMUSG00000035042",
                        "ENSMUSG00000074896",
                        "ENSMUSG00000035929"),
