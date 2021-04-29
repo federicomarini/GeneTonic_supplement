@@ -1,0 +1,299 @@
+---
+title: >
+  Using GeneTonic on the macrophage dataset (EGAS00001000563)
+author:
+- name: Federico Marini
+  affiliation: 
+  - &id1 Institute of Medical Biostatistics, Epidemiology and Informatics (IMBEI), Mainz<br>
+  - &id2 Center for Thrombosis and Hemostasis (CTH), Mainz<br>
+  email: marinif@uni-mainz.de
+- name: Annekathrin Ludt
+  affiliation: 
+  - *id1
+- name: Jan Linke
+  affiliation: 
+  - *id1
+  - *id2
+- name: Konstantin Strauch
+  affiliation: 
+  - *id1
+
+date: "`r BiocStyle::doc_date()`"
+package: "`r BiocStyle::pkg_ver('ideal')`"
+output: 
+  bookdown::html_document2:
+    toc: true
+    toc_float: true
+    theme: cosmo
+    code_folding: show
+    code_download: true
+editor_options: 
+  chunk_output_type: console
+link-citations: true
+bibliography: "../genetonic_supplement.bib"
+---
+
+```{r setup, include=FALSE, cache=FALSE, eval = TRUE, echo = FALSE}
+library("knitr")
+opts_chunk$set(
+  fig.align = "center",
+  fig.show = "asis",
+  eval = TRUE,
+  fig.width = 10,
+  fig.height = 7,
+  tidy = FALSE,
+  message = FALSE,
+  warning = FALSE,
+  size = "small",
+  comment = "##",
+  echo = TRUE,
+  results = "markup"
+)
+options(replace.assign = TRUE, width = 80)
+```
+
+# About the data
+
+- Anka: EGAS00001000563
+- Anka: macrophage package
+- Anka: [@Alasoo2018]
+- Anka: link to paper
+
+# Loading required packages
+
+We load the packages required to perform all the analytic steps presented in this document.
+
+```{r loadLibraries, results='hide'}
+library("DESeq2")
+library("topGO")
+library("pheatmap")
+library("org.Mm.eg.db")
+library("pcaExplorer")
+library("ideal")
+library("DT")
+library("GeneTonic")
+```
+
+# Data processing
+
+- Anka: refer to macrophage package
+- Anka: refer to our vignette as well if you want
+
+## Exploratory data analyisis
+
+We read in the dataset, apply the vst transformation for performing PCA and creating a heatmap of the sample to sample distances.  
+We'll use some functions from the `pcaExplorer` package [@Marini2019].
+
+```{r eda-macrophage}
+Anka: 
+
+read in
+rlog/vst
+pca
+heatmap?
+```
+
+## Differential expression analysis
+
+We set the False Discovery Rate to 0.01 and we run the `DESeq2` workflow, generating results and using the `apeglm` shrinkage estimator.  
+We plot the results as an MA-plot and report them in a table, using the functions from the `ideal` package [@Marini2020].
+
+```{r de-macrophage}
+Anka: 
+FDR <- 0.01
+test with increased lfcThreshold, see vignette
+maplot
+DT datatable
+
+
+
+```
+
+## Functional enrichment analysis
+
+We perform functional enrichment analysis, here using the `topGOtable` wrapper to the method implemented in the `topGO` package.
+
+- Anka: see backbone from SFile2
+- Anka: main change: organism is human
+
+```{r enrich-alma, cache=TRUE}
+expressedInAssay <- (rowSums(assay(dds_alma)) > 0)
+geneUniverseExprENS <- rownames(dds_alma)[expressedInAssay]
+geneUniverseExpr <- anno_df$gene_name[match(geneUniverseExprENS, anno_df$gene_id)]
+
+
+
+res_enrich <- shake_topGOtableResult(GObps_ko_vs_ctrl)
+res_enrich <- get_aggrscores(
+  res_enrich = res_enrich,
+  res_de = res_alma_ko_vs_ctrl,
+  annotation_obj = anno_df
+)
+
+# saveRDS(res_enrich, file = "usecase_res_enrich_alma.rds")
+
+DT::datatable(res_enrich, rownames = FALSE)
+```
+
+### Using alternative enrichment analysis methods
+
+It is possible to use the output of different other methods for enrichment analysis, thanks to the `shaker_*` functions implemented in `GeneTonic` - see for example `?shake_topGOtableResult`, and navigate to the manual pages for the other functions listed in the "See Also" section.
+
+`GeneTonic` is able to convert for you the output of
+
+- DAVID (text file, downloaded from the DAVID website)
+- clusterProfiler (takes `enrichResult` objects)
+- enrichr (a data.frame with the output of `enrichr`, or the text file exported from Enrichr)
+- fgsea (the output of `fgsea()` function)
+- g:Profiler (the text file output as exported from g:Profiler, or a data.frame with the output of `gost()` in `gprofiler2`)
+
+Some examples on how to use them are reported here:
+
+- Anka: "just port the macrophage part over?" + careful naming
+
+```{r, eval=FALSE}
+# clusterProfiler --------------------------------------------------------------
+library("clusterProfiler")
+degenes_alma <- deseqresult2df(res_alma_ko_vs_ctrl, FDR = 0.05)$id
+ego_alma <- enrichGO(gene          = degenes_alma,
+                     universe      = rownames(dds_alma)[expressedInAssay],
+                     OrgDb         = org.Mm.eg.db,
+                     ont           = "BP",
+                     keyType       = 'ENSEMBL',
+                     pAdjustMethod = "BH",
+                     pvalueCutoff  = 0.01,
+                     qvalueCutoff  = 0.05,
+                     readable      = TRUE)
+res_enrich_clusterprofiler <- shake_enrichResult(ego_alma)
+
+# g:profiler -------------------------------------------------------------------
+library("gprofiler2")
+degenes <- deseqresult2df(res_alma_ko_vs_ctrl, FDR = 0.05)$SYMBOL
+gostres_a20 <- gost(
+  query = degenes, 
+  ordered_query = FALSE, 
+  multi_query = FALSE, 
+  significant = FALSE, 
+  exclude_iea = TRUE, 
+  measure_underrepresentation = FALSE, 
+  evcodes = TRUE, 
+  user_threshold = 0.05, 
+  correction_method = "g_SCS", 
+  domain_scope = "annotated", 
+  numeric_ns = "", 
+  sources = "GO:BP", 
+  as_short_link = FALSE)
+
+res_enrich_gprofiler <- shake_gprofilerResult(gprofiler_output = gostres_a20$result)
+
+# fgsea ------------------------------------------------------------------------
+library("dplyr")
+library("tibble")
+library("fgsea")
+library("msigdbr")
+res2 <- res_alma_ko_vs_ctrl %>%
+  as.data.frame() %>% 
+  dplyr::select(SYMBOL, log2FoldChange)
+de_ranks <- deframe(res2)
+head(de_ranks, 20)
+msigdbr_df <- msigdbr(species = "Mus musculus", category = "C5", subcategory = "BP")
+msigdbr_list = split(x = msigdbr_df$gene_symbol, f = msigdbr_df$gs_name)
+fgseaRes <- fgsea(pathways = msigdbr_list, 
+                  stats = de_ranks, 
+                  nperm=100000)
+fgseaRes <- fgseaRes %>% 
+  arrange(desc(NES))
+
+res_enrich_fgsea <- shake_fgseaResult(fgsea_output = fgseaRes)
+
+# enrichr ----------------------------------------------------------------------
+library("enrichR")
+dbs <- c("GO_Molecular_Function_2018",
+         "GO_Cellular_Component_2018",
+         "GO_Biological_Process_2018",
+         "KEGG_2019_Human",
+         "Reactome_2016",
+         "WikiPathways_2019_Human")
+degenes <- (deseqresult2df(res_alma_ko_vs_ctrl, FDR = 0.05)$SYMBOL)
+enrichr_output_a20 <- enrichr(degenes, dbs)
+
+res_enrich_enrichr_BPs <- shake_enrichrResult(
+  enrichr_output = enrichr_output_a20$GO_Biological_Process_2018)
+res_enrich_enrichr_KEGG <- shake_enrichrResult(
+  enrichr_output = enrichr_output_a20$KEGG_2019_Human)
+```
+
+## Assembling the `gtl` object
+
+To simplify the usage of the function from `GeneTonic`, we create a `GeneTonic_list` object
+
+- Anka: as above, 
+
+```{r}
+gtl_macrophage <- GeneTonic_list(
+  dds = dds_alma,
+  res_de = res_alma_ko_vs_ctrl,
+  res_enrich = res_enrich,
+  annotation_obj = anno_df
+)
+
+# saveRDS(gtl_alma, "gtl_alma.rds")
+```
+
+# Running `GeneTonic` on the dataset
+
+Let's load the `GeneTonicList` object, containing all the structured input needed.
+
+Anka: 
+- from here onwards, let's use gtl_macrophage and use the correct references to that also in text
+
+```{r}
+gtl_alma <- readRDS("gtl_alma.rds")
+```
+
+## `GeneTonic`, interactively
+
+This command will launch the `GeneTonic` app:
+
+```{r eval=FALSE}
+GeneTonic(gtl = gtl_alma)
+```
+
+The exploration can be guided by launching the introductory tours for each section of the app, and finally one can generate a small report focused on the features and genesets of interest.
+
+If some more custom visualizations are required, it is possible to export the objects in use from the app as a SummarizedExperiment object, to be then passed to the `iSEE` software [@Rue-Albrecht2018] for further exploration.
+
+## Using `GeneTonic`'s functions in analysis reports 
+
+Anka: 
+- I'd say we take 5-6 plots, and for the rest we refer to the vignette
+
+The functionality of `GeneTonic` can be used also as standalone functions, to be called for example in existing analysis reports in RMarkdown, or R scripts.  
+In the following chunks, we show how it is possible to call some of the functions on the A20-deficient microglia set.
+
+```{r}
+em <- enrichment_map(gtl = gtl_alma, n_gs = 100)
+
+library("visNetwork")
+library("magrittr")
+em %>%
+  visIgraph() %>%
+  visOptions(
+    highlightNearest = list(
+      enabled = TRUE,
+      degree = 1,
+      hover = TRUE
+    ),
+    nodesIdSelection = TRUE
+  )
+```
+
+
+
+# Session information {-}
+
+```{r}
+sessionInfo()
+```
+
+# Bibliography {-}
