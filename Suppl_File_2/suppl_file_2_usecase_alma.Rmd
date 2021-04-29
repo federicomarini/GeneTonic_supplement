@@ -195,34 +195,37 @@ Some examples on how to use them are reported here:
 # clusterProfiler --------------------------------------------------------------
 library("clusterProfiler")
 degenes_alma <- deseqresult2df(res_alma_ko_vs_ctrl, FDR = 0.05)$id
-ego_alma <- enrichGO(gene          = degenes_alma,
-                     universe      = rownames(dds_alma)[expressedInAssay],
-                     OrgDb         = org.Mm.eg.db,
-                     ont           = "BP",
-                     keyType       = 'ENSEMBL',
-                     pAdjustMethod = "BH",
-                     pvalueCutoff  = 0.01,
-                     qvalueCutoff  = 0.05,
-                     readable      = TRUE)
+ego_alma <- enrichGO(
+  gene = degenes_alma,
+  universe = rownames(dds_alma)[expressedInAssay],
+  OrgDb = org.Mm.eg.db,
+  ont = "BP",
+  keyType = "ENSEMBL",
+  pAdjustMethod = "BH",
+  pvalueCutoff = 0.01,
+  qvalueCutoff = 0.05,
+  readable = TRUE
+)
 res_enrich_clusterprofiler <- shake_enrichResult(ego_alma)
 
 # g:profiler -------------------------------------------------------------------
 library("gprofiler2")
 degenes <- deseqresult2df(res_alma_ko_vs_ctrl, FDR = 0.05)$SYMBOL
 gostres_a20 <- gost(
-  query = degenes, 
-  ordered_query = FALSE, 
-  multi_query = FALSE, 
-  significant = FALSE, 
-  exclude_iea = TRUE, 
-  measure_underrepresentation = FALSE, 
-  evcodes = TRUE, 
-  user_threshold = 0.05, 
-  correction_method = "g_SCS", 
-  domain_scope = "annotated", 
-  numeric_ns = "", 
-  sources = "GO:BP", 
-  as_short_link = FALSE)
+  query = degenes,
+  ordered_query = FALSE,
+  multi_query = FALSE,
+  significant = FALSE,
+  exclude_iea = TRUE,
+  measure_underrepresentation = FALSE,
+  evcodes = TRUE,
+  user_threshold = 0.05,
+  correction_method = "g_SCS",
+  domain_scope = "annotated",
+  numeric_ns = "",
+  sources = "GO:BP",
+  as_short_link = FALSE
+)
 
 res_enrich_gprofiler <- shake_gprofilerResult(gprofiler_output = gostres_a20$result)
 
@@ -232,35 +235,41 @@ library("tibble")
 library("fgsea")
 library("msigdbr")
 res2 <- res_alma_ko_vs_ctrl %>%
-  as.data.frame() %>% 
+  as.data.frame() %>%
   dplyr::select(SYMBOL, log2FoldChange)
 de_ranks <- deframe(res2)
 head(de_ranks, 20)
 msigdbr_df <- msigdbr(species = "Mus musculus", category = "C5", subcategory = "BP")
-msigdbr_list = split(x = msigdbr_df$gene_symbol, f = msigdbr_df$gs_name)
-fgseaRes <- fgsea(pathways = msigdbr_list, 
-                  stats = de_ranks, 
-                  nperm=100000)
-fgseaRes <- fgseaRes %>% 
+msigdbr_list <- split(x = msigdbr_df$gene_symbol, f = msigdbr_df$gs_name)
+fgseaRes <- fgsea(
+  pathways = msigdbr_list,
+  stats = de_ranks,
+  nperm = 100000
+)
+fgseaRes <- fgseaRes %>%
   arrange(desc(NES))
 
 res_enrich_fgsea <- shake_fgseaResult(fgsea_output = fgseaRes)
 
 # enrichr ----------------------------------------------------------------------
 library("enrichR")
-dbs <- c("GO_Molecular_Function_2018",
-         "GO_Cellular_Component_2018",
-         "GO_Biological_Process_2018",
-         "KEGG_2019_Human",
-         "Reactome_2016",
-         "WikiPathways_2019_Human")
+dbs <- c(
+  "GO_Molecular_Function_2018",
+  "GO_Cellular_Component_2018",
+  "GO_Biological_Process_2018",
+  "KEGG_2019_Human",
+  "Reactome_2016",
+  "WikiPathways_2019_Human"
+)
 degenes <- (deseqresult2df(res_alma_ko_vs_ctrl, FDR = 0.05)$SYMBOL)
 enrichr_output_a20 <- enrichr(degenes, dbs)
 
 res_enrich_enrichr_BPs <- shake_enrichrResult(
-  enrichr_output = enrichr_output_a20$GO_Biological_Process_2018)
+  enrichr_output = enrichr_output_a20$GO_Biological_Process_2018
+)
 res_enrich_enrichr_KEGG <- shake_enrichrResult(
-  enrichr_output = enrichr_output_a20$KEGG_2019_Human)
+  enrichr_output = enrichr_output_a20$KEGG_2019_Human
+)
 ```
 
 ## Assembling the `gtl` object
@@ -310,31 +319,41 @@ For more details on the functions and their outputs, please refer to the package
 We can represent the relationships between genesets and genes with `enhance_table()`, `gs_summary_heat()`, and `ggs_graph()`:
 
 ```{r}
-p <- enhance_table(gtl = gtl_alma,
-                   n_gs = 30,
-                   chars_limit = 60)
+p <- enhance_table(
+  gtl = gtl_alma,
+  n_gs = 30,
+  chars_limit = 60
+)
 p
 
 ## could be made interactive with...
 # library("plotly")
 # ggplotly(p)
 
-gs_summary_heat(gtl = gtl_alma,
-                n_gs = 5)
+gs_summary_heat(
+  gtl = gtl_alma,
+  n_gs = 5
+)
 
 
-ggs <- ggs_graph(gtl = gtl_alma,
-                 n_gs = 20)
+ggs <- ggs_graph(
+  gtl = gtl_alma,
+  n_gs = 20
+)
 ggs
 ## could be viewed interactively with
 library("visNetwork")
 library("magrittr")
 ggs %>%
   visIgraph() %>%
-  visOptions(highlightNearest = list(enabled = TRUE,
-                                     degree = 1,
-                                     hover = TRUE),
-             nodesIdSelection = TRUE)
+  visOptions(
+    highlightNearest = list(
+      enabled = TRUE,
+      degree = 1,
+      hover = TRUE
+    ),
+    nodesIdSelection = TRUE
+  )
 ```
 
 ### Overview representations
@@ -342,19 +361,23 @@ ggs %>%
 We can also obtain summary representations of the enrichment results, either as table-like views (with `gs_volcano()`, `gs_summary_overview()`, `gs_fuzzyclustering()`, `gs_scoresheat()`), or to represent the relationships among genesets (via `enrichment_map()`, `gs_dendro()`, `gs_mds()`)
 
 ```{r}
-gs_volcano(res_enrich = res_enrich_a20,
-           p_threshold = 0.05,
-           color_by = "aggr_score",
-           volcano_labels = 5,
-           gs_ids = c("GO:0033690", "GO:0050770"),
-           plot_title = "A20-microglia geneset volcano")
+gs_volcano(
+  res_enrich = res_enrich_a20,
+  p_threshold = 0.05,
+  color_by = "aggr_score",
+  volcano_labels = 5,
+  gs_ids = c("GO:0033690", "GO:0050770"),
+  plot_title = "A20-microglia geneset volcano"
+)
 
-gs_summary_overview(res_enrich = res_enrich_a20,
-                    n_gs = 60,
-                    p_value_column = "gs_pvalue",
-                    color_by = "z_score")
+gs_summary_overview(
+  res_enrich = res_enrich_a20,
+  n_gs = 60,
+  p_value_column = "gs_pvalue",
+  color_by = "z_score"
+)
 
-res_enrich_subset <- res_enrich_a20[1:200,]
+res_enrich_subset <- res_enrich_a20[1:200, ]
 fuzzy_subset <- gs_fuzzyclustering(
   res_enrich = res_enrich_subset,
   n_gs = nrow(res_enrich_subset),
@@ -362,7 +385,8 @@ fuzzy_subset <- gs_fuzzyclustering(
   similarity_matrix = NULL,
   similarity_threshold = 0.35,
   fuzzy_seeding_initial_neighbors = 3,
-  fuzzy_multilinkage_rule = 0.5)
+  fuzzy_multilinkage_rule = 0.5
+)
 
 # show all genesets members of the first cluster
 DT::datatable(
@@ -378,9 +402,11 @@ DT::datatable(
 vst_alma <- vst(dds_alma)
 scores_mat <- gs_scores(
   se = vst_alma,
-  gtl = gtl_alma)
+  gtl = gtl_alma
+)
 gs_scoresheat(scores_mat,
-              n_gs = 30)
+  n_gs = 30
+)
 ```
 
 
@@ -402,13 +428,15 @@ em %>%
     nodesIdSelection = TRUE
   )
 
-distilled <- distill_enrichment(gtl = gtl_alma,
-                                n_gs = 100,
-                                cluster_fun = "cluster_markov")
+distilled <- distill_enrichment(
+  gtl = gtl_alma,
+  n_gs = 100,
+  cluster_fun = "cluster_markov"
+)
 DT::datatable(distilled$distilled_table)
 DT::datatable(distilled$res_enrich)
 
-dg <- distilled$distilled_em 
+dg <- distilled$distilled_em
 
 library("igraph")
 library("visNetwork")
@@ -423,32 +451,40 @@ V(dg)$color.hover <- scales::alpha(colpal, alpha = 0.5)
 V(dg)$color.border <- "black"
 
 visNetwork::visIgraph(dg) %>%
-  visOptions(highlightNearest = list(enabled = TRUE,
-                                     degree = 1,
-                                     hover = TRUE),
-             nodesIdSelection = TRUE, 
-             selectedBy = "membership")
+  visOptions(
+    highlightNearest = list(
+      enabled = TRUE,
+      degree = 1,
+      hover = TRUE
+    ),
+    nodesIdSelection = TRUE,
+    selectedBy = "membership"
+  )
 
 
 
-gs_dendro(gtl = gtl_alma,
-          n_gs = 50,
-          gs_dist_type = "kappa", 
-          clust_method = "ward.D2",
-          color_leaves_by = "z_score",
-          size_leaves_by = "gs_pvalue",
-          color_branches_by = "clusters",
-          create_plot = TRUE)
+gs_dendro(
+  gtl = gtl_alma,
+  n_gs = 50,
+  gs_dist_type = "kappa",
+  clust_method = "ward.D2",
+  color_leaves_by = "z_score",
+  size_leaves_by = "gs_pvalue",
+  color_branches_by = "clusters",
+  create_plot = TRUE
+)
 
-gs_mds(gtl = gtl_alma,
-       n_gs = 200,
-       gs_ids = NULL,
-       similarity_measure = "kappa_matrix",
-       mds_k = 2,
-       mds_labels = 10,
-       mds_colorby = "z_score",
-       gs_labels = NULL,
-       plot_title = NULL) 
+gs_mds(
+  gtl = gtl_alma,
+  n_gs = 200,
+  gs_ids = NULL,
+  similarity_measure = "kappa_matrix",
+  mds_k = 2,
+  mds_labels = 10,
+  mds_colorby = "z_score",
+  gs_labels = NULL,
+  plot_title = NULL
+)
 ```
 
 ### General use functions
@@ -456,20 +492,23 @@ gs_mds(gtl = gtl_alma,
 It is possible to obtain focused representations and descriptions of single genesets with `gs_heatmap()`, `go2html()`, and `signature_volcano()` - these need the Gene Ontology identifier to generate the desired content, while the `gtl` object contains all the necessary expression matrices and tables.
 
 ```{r}
-gs_heatmap(se = vst_alma,
-           gtl = gtl_alma,
-           geneset_id = "GO:0060337"  ,
-           cluster_columns = TRUE,
-           anno_col_info = "condition"
+gs_heatmap(
+  se = vst_alma,
+  gtl = gtl_alma,
+  geneset_id = "GO:0060337",
+  cluster_columns = TRUE,
+  anno_col_info = "condition"
 )
 
 go_2_html("GO:0060337",
-          res_enrich = res_enrich_a20)
+  res_enrich = res_enrich_a20
+)
 
-signature_volcano(gtl = gtl_alma,
-                  geneset_id = "GO:0060337",
-                  FDR = 0.05,
-                  color = "#1a81c2"
+signature_volcano(
+  gtl = gtl_alma,
+  geneset_id = "GO:0060337",
+  FDR = 0.05,
+  color = "#1a81c2"
 )
 ```
 
@@ -487,28 +526,28 @@ genes_synapse_assembly <- c(
   "Pdlim5"
 )
 
-genes_synapse_assembly_ensids <- 
+genes_synapse_assembly_ensids <-
   anno_df$gene_id[match(genes_synapse_assembly, anno_df$gene_name)]
 
-gs_heatmap(se = vst_alma,
-           gtl = gtl_alma,
-           genelist = genes_synapse_assembly_ensids,
-           cluster_columns = TRUE,
-           cluster_rows = FALSE,
-           anno_col_info = "condition"
+gs_heatmap(
+  se = vst_alma,
+  gtl = gtl_alma,
+  genelist = genes_synapse_assembly_ensids,
+  cluster_columns = TRUE,
+  cluster_rows = FALSE,
+  anno_col_info = "condition"
 )
 
 
-res_enrich_a20[res_enrich_a20$gs_id == "GO:0051607",]
+res_enrich_a20[res_enrich_a20$gs_id == "GO:0051607", ]
 
-gs_heatmap(se = vst_alma,
-           gtl = gtl_alma,
-           geneset_id = "GO:0051607",
-           cluster_columns = TRUE,
-           anno_col_info = "condition"
+gs_heatmap(
+  se = vst_alma,
+  gtl = gtl_alma,
+  geneset_id = "GO:0051607",
+  cluster_columns = TRUE,
+  anno_col_info = "condition"
 )
-
-
 ```
 
 
@@ -517,16 +556,20 @@ gs_heatmap(se = vst_alma,
 The reporting functionality of `happy_hour()` can be called anytime also from the command line, focusing on a subset of genes and genesets of interest, which will be presented with additional detail in the output document.
 
 ```{r happyhour, eval=FALSE}
-happy_hour(gtl = gtl_alma,
-           project_id = "a20-microglia",
-           mygenesets = c(res_enrich_a20$gs_id[c(1:5,11,31)],
-                          # additionally selecting some by id
-                          "GO:0051963" # regulation of synapse assembly
-                          )
-           mygenes = c("ENSMUSG00000035042",
-                       "ENSMUSG00000074896",
-                       "ENSMUSG00000035929"),
-           open_after_creating = TRUE
+happy_hour(
+  gtl = gtl_alma,
+  project_id = "a20-microglia",
+  mygenesets = c(
+    res_enrich_a20$gs_id[c(1:5, 11, 31)],
+    # additionally selecting some by id
+    "GO:0051963" # regulation of synapse assembly
+  ),
+  mygenes = c(
+    "ENSMUSG00000035042",
+    "ENSMUSG00000074896",
+    "ENSMUSG00000035929"
+  ),
+  open_after_creating = TRUE
 )
 ```
 
