@@ -128,12 +128,15 @@ pcaExplorer::pcaplot(vst_macrophage,
 We set the False Discovery Rate to 0.01 and we run the `DESeq2` workflow, generating results and using the `apeglm` shrinkage estimator.  
 We plot the results as an MA-plot and report them in a table, using the functions from the `ideal` package [@Marini2020].
 
-```{r de-macrophage}
+```{r de-macrophage1, cache=TRUE}
 anno_df <- readRDS("usecase_annodf_macrophage.rds")
 FDR <- 0.01
 
 dds_macrophage <- DESeq(dds_macrophage)
+```
 
+
+```{r de-macrophage2}
 results_IFNg_vs_naive <- results(dds_macrophage,
                                  name = "condition_IFNg_vs_naive",
                                  lfcThreshold = 1,
@@ -142,7 +145,9 @@ summary(results_IFNg_vs_naive)
 
 results_IFNg_vs_naive$SYMBOL <- anno_df$gene_name[match(rownames(results_IFNg_vs_naive), anno_df$gene_id)]
 
-ideal::plot_ma(results_IFNg_vs_naive, ylim = c(-5, 5), title = "MAplot - INFg vs Naive")
+# saveRDS(results_IFNg_vs_naive, file = "usecase_res_de_macrophage.rds")
+
+ideal::plot_ma(results_IFNg_vs_naive, ylim = c(-5, 5), title = "MAplot - IFNg vs Naive")
 
 tbl_DEres_IFNg_vs_naive <- deseqresult2df(results_IFNg_vs_naive, FDR = FDR)
 
@@ -222,18 +227,18 @@ It is possible to use the output of different other methods for enrichment analy
 
 Some examples on how to use them are reported here:
 
-```{r clusterProfiler}
+```{r enrichment-othermethods, eval=FALSE}
 # clusterProfiler --------------------------------------------------------------
 degenes_macrophage <- deseqresult2df(results_IFNg_vs_naive, FDR = FDR)$id
 ego_macrophage <- enrichGO(gene          = degenes_macrophage,
-                     universe      = rownames(dds_macrophage)[expressedInAssay],
-                     OrgDb         = org.Hs.eg.db,
-                     ont           = "BP",
-                     keyType       = 'ENSEMBL',
-                     pAdjustMethod = "BH",
-                     pvalueCutoff  = 0.01,
-                     qvalueCutoff  = 0.05,
-                     readable      = TRUE)
+                           universe      = rownames(dds_macrophage)[expressedInAssay],
+                           OrgDb         = org.Hs.eg.db,
+                           ont           = "BP",
+                           keyType       = 'ENSEMBL',
+                           pAdjustMethod = "BH",
+                           pvalueCutoff  = 0.01,
+                           qvalueCutoff  = 0.05,
+                           readable      = TRUE)
 res_enrich_clusterprofiler <- shake_enrichResult(ego_macrophage)
 
 # g:profiler -------------------------------------------------------------------
@@ -260,9 +265,8 @@ res2 <- results_IFNg_vs_naive %>%
   as.data.frame() %>% 
   dplyr::select(SYMBOL, log2FoldChange)
 de_ranks <- deframe(res2)
-head(de_ranks, 20)
 msigdbr_df <- msigdbr(species = "Homo sapiens", category = "C5", subcategory = "BP")
-msigdbr_list = split(x = msigdbr_df$gene_symbol, f = msigdbr_df$gs_name)
+msigdbr_list <- split(x = msigdbr_df$gene_symbol, f = msigdbr_df$gs_name)
 fgseaRes <- fgsea(pathways = msigdbr_list, 
                   stats = de_ranks, 
                   nperm=100000)
@@ -278,7 +282,7 @@ dbs <- c("GO_Molecular_Function_2018",
          "KEGG_2019_Human",
          "Reactome_2016",
          "WikiPathways_2019_Human")
-degenes <- (deseqresult2df(results_IFNg_vs_naive, FDR = FDR)$SYMBOL)
+degenes <- deseqresult2df(results_IFNg_vs_naive, FDR = FDR)$SYMBOL
 enrichr_output_macrophage <- enrichr(degenes, dbs)
 
 res_enrich_enrichr_BPs <- shake_enrichrResult(
@@ -291,7 +295,7 @@ res_enrich_enrichr_KEGG <- shake_enrichrResult(
 
 To simplify the usage of the function from `GeneTonic`, we create a `GeneTonic_list` object.
 
-```{r gtllist, eval = F}
+```{r gtllist}
 gtl_macrophage <- GeneTonic_list(
   dds = dds_macrophage,
   res_de = results_IFNg_vs_naive,
@@ -307,7 +311,7 @@ saveRDS(gtl_macrophage, "gtl_macrophage.rds")
 Let's load the `GeneTonicList` object, containing all the structured input needed.
 
 
-```{r, eval = F}
+```{r}
 gtl_macrophage <- readRDS("gtl_macrophage.rds")
 ```
 
@@ -328,9 +332,10 @@ If some more custom visualizations are required, it is possible to export the ob
 The functionality of `GeneTonic` can be used also as standalone functions, to be called for example in existing analysis reports in RMarkdown, or R scripts.  
 In the following chunks, we show how it is possible to call some of the functions on the dataset of the `macrophage` package.
 
-```{r graphs, eval = F}
-em <- enrichment_map(gtl = gtl_macrophage, n_gs = 100)
-
+```{r graphs, eval = TRUE}
+em <- enrichment_map(gtl = gtl_macrophage, 
+                     n_gs = 100,
+                     color_by = "z_score")
 
 em %>%
   visIgraph() %>%
@@ -343,24 +348,28 @@ em %>%
     nodesIdSelection = TRUE
   )
 
-GeneTonic::gs_heatmap(
+gs_heatmap(
+  se = vst_macrophage,
   gtl = gtl_macrophage,
   geneset_id = res_enrich$gs_id[1],
+  cluster_columns = TRUE,
   FDR = FDR)
 
-GeneTonic::signature_volcano(
+signature_volcano(
   gtl = gtl_macrophage,
   geneset_id = res_enrich$gs_id[1],
   FDR = FDR
 )
 
-score_mat <- GeneTonic::gs_scores(gtl = gtl_macrophage)
+score_mat <- gs_scores(se = vst_macrophage,
+                       gtl = gtl_macrophage)
 
-GeneTonic::gs_scoresheat(score_mat)
+gs_scoresheat(score_mat,
+              n_gs = 40)
 
-GeneTonic::gs_mds(
+gs_mds(
   gtl = gtl_macrophage,
-  n_gs = nrwo(gtl_macrophage$res_enrich),
+  n_gs = nrow(gtl_macrophage$res_enrich),
   mds_labels = 10)
 
 ```
