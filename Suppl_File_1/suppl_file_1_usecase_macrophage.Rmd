@@ -303,7 +303,7 @@ gtl_macrophage <- GeneTonic_list(
   annotation_obj = anno_df
 )
 
-saveRDS(gtl_macrophage, "gtl_macrophage.rds")
+# saveRDS(gtl_macrophage, "gtl_macrophage.rds")
 ```
 
 # Running `GeneTonic` on the dataset
