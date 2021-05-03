@@ -113,13 +113,13 @@ dds_macrophage
 
 rownames(dds_macrophage) <- substr(rownames(dds_macrophage), 1, 15)
 
-rld_macrophage <- rlogTransformation(dds_macrophage)
-rld_macrophage <- rld_macrophage[, rld_macrophage$condition %in% c("naive", "IFNg")]
+vst_macrophage <- vst(dds_macrophage)
+vst_macrophage <- vst_macrophage[, vst_macrophage$condition %in% c("naive", "IFNg")]
 
 
-pheatmap::pheatmap(as.matrix(dist(t(assay(rld_macrophage)))))
+pheatmap::pheatmap(as.matrix(dist(t(assay(vst_macrophage)))))
 
-pcaExplorer::pcaplot(rld_macrophage,
+pcaExplorer::pcaplot(vst_macrophage,
                      ntop = 5000,
                      title = "PCA - top5000 most variable genes",
                      ellipse = FALSE
