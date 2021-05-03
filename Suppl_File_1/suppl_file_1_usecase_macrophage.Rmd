@@ -1,6 +1,6 @@
 ---
 title: >
-  Using GeneTonic on the macrophage dataset (EGAS00001000563)
+  Using GeneTonic on the macrophage dataset (EGAS00001002236)
 author:
 - name: Federico Marini
   affiliation: 
