@@ -111,11 +111,8 @@ We'll use some functions from the `pcaExplorer` package [@Marini2019].
 dds_macrophage <- readRDS("usecase_dds_macrophage.rds")
 dds_macrophage
 
-rownames(dds_macrophage) <- substr(rownames(dds_macrophage), 1, 15)
-
 vst_macrophage <- vst(dds_macrophage)
 vst_macrophage <- vst_macrophage[, vst_macrophage$condition %in% c("naive", "IFNg")]
-
 
 pheatmap::pheatmap(as.matrix(dist(t(assay(vst_macrophage)))))
 
