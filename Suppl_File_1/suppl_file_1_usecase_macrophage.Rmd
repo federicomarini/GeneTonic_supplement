@@ -137,19 +137,19 @@ FDR <- 0.01
 
 dds_macrophage <- DESeq(dds_macrophage)
 
-results_IGNg_vs_naive <- results(dds_macrophage,
+results_IFNg_vs_naive <- results(dds_macrophage,
                                  name = "condition_IFNg_vs_naive",
                                  lfcThreshold = 1,
                                  alpha = FDR)
-summary(results_IGNg_vs_naive)
+summary(results_IFNg_vs_naive)
 
-results_IGNg_vs_naive$SYMBOL <- anno_df$gene_name[match(rownames(results_IGNg_vs_naive), anno_df$gene_id)]
+results_IFNg_vs_naive$SYMBOL <- anno_df$gene_name[match(rownames(results_IFNg_vs_naive), anno_df$gene_id)]
 
-ideal::plot_ma(results_IGNg_vs_naive, ylim = c(-5, 5), title = "MAplot - INFg vs Naive")
+ideal::plot_ma(results_IFNg_vs_naive, ylim = c(-5, 5), title = "MAplot - INFg vs Naive")
 
-tbl_DEres_IGNg_vs_naive <- deseqresult2df(results_IGNg_vs_naive, FDR = FDR)
+tbl_DEres_IFNg_vs_naive <- deseqresult2df(results_IFNg_vs_naive, FDR = FDR)
 
-DT::datatable(tbl_DEres_IGNg_vs_naive, rownames = FALSE)
+DT::datatable(tbl_DEres_IFNg_vs_naive, rownames = FALSE)
 ```
 
 ## Functional enrichment analysis
@@ -163,7 +163,7 @@ geneUniverseExprENS <- rownames(dds_macrophage)[expressedInAssay]
 geneUniverseExpr <- anno_df$gene_name[match(geneUniverseExprENS, anno_df$gene_id)]
 
 GObps_INFg_vs_naive <- topGOtable(
-  DEgenes = tbl_DEres_IGNg_vs_naive$SYMBOL,
+  DEgenes = tbl_DEres_IFNg_vs_naive$SYMBOL,
   BGgenes = geneUniverseExpr,
   ontology = "BP",
   geneID = "symbol",
@@ -173,7 +173,7 @@ GObps_INFg_vs_naive <- topGOtable(
 )
 
 GOmfs_INFg_vs_naive <- topGOtable(
-  DEgenes = tbl_DEres_IGNg_vs_naive$SYMBOL,
+  DEgenes = tbl_DEres_IFNg_vs_naive$SYMBOL,
   BGgenes = geneUniverseExpr,
   ontology = "MF",
   geneID = "symbol",
@@ -183,7 +183,7 @@ GOmfs_INFg_vs_naive <- topGOtable(
 )
 
 GOccs_INFg_vs_naive <- topGOtable(
-  DEgenes = tbl_DEres_IGNg_vs_naive$SYMBOL,
+  DEgenes = tbl_DEres_IFNg_vs_naive$SYMBOL,
   BGgenes = geneUniverseExpr,
   ontology = "CC",
   geneID = "symbol",
@@ -195,7 +195,7 @@ GOccs_INFg_vs_naive <- topGOtable(
 res_enrich_macrophage <- shake_topGOtableResult(GObps_INFg_vs_naive)
 res_enrich_macrophage <- get_aggrscores(
   res_enrich = res_enrich_macrophage,
-  res_de = results_IGNg_vs_naive,
+  res_de = results_IFNg_vs_naive,
   annotation_obj = anno_df
 )
 
@@ -206,7 +206,7 @@ DT::datatable(res_enrich_macrophage, rownames = FALSE)
 res_enrich <- shake_topGOtableResult(GObps_INFg_vs_naive)
 res_enrich <- get_aggrscores(
   res_enrich = res_enrich,
-  res_de = results_IGNg_vs_naive,
+  res_de = results_IFNg_vs_naive,
   annotation_obj = anno_df
 )
 
@@ -231,7 +231,7 @@ Some examples on how to use them are reported here:
 
 ```{r clusterProfiler}
 # clusterProfiler --------------------------------------------------------------
-degenes_macrophage <- deseqresult2df(results_IGNg_vs_naive, FDR = FDR)$id
+degenes_macrophage <- deseqresult2df(results_IFNg_vs_naive, FDR = FDR)$id
 ego_macrophage <- enrichGO(gene          = degenes_macrophage,
                      universe      = rownames(dds_macrophage)[expressedInAssay],
                      OrgDb         = org.Hs.eg.db,
@@ -244,7 +244,7 @@ ego_macrophage <- enrichGO(gene          = degenes_macrophage,
 res_enrich_clusterprofiler <- shake_enrichResult(ego_macrophage)
 
 # g:profiler -------------------------------------------------------------------
-degenes <- deseqresult2df(results_IGNg_vs_naive, FDR = FDR)$SYMBOL
+degenes <- deseqresult2df(results_IFNg_vs_naive, FDR = FDR)$SYMBOL
 gostres_macrophage <- gost(
   query = degenes, 
   ordered_query = FALSE, 
@@ -263,7 +263,7 @@ gostres_macrophage <- gost(
 res_enrich_gprofiler <- shake_gprofilerResult(gprofiler_output = gostres_macrophage$result)
 
 # fgsea ------------------------------------------------------------------------
-res2 <- results_IGNg_vs_naive %>%
+res2 <- results_IFNg_vs_naive %>%
   as.data.frame() %>% 
   dplyr::select(SYMBOL, log2FoldChange)
 de_ranks <- deframe(res2)
@@ -285,7 +285,7 @@ dbs <- c("GO_Molecular_Function_2018",
          "KEGG_2019_Human",
          "Reactome_2016",
          "WikiPathways_2019_Human")
-degenes <- (deseqresult2df(results_IGNg_vs_naive, FDR = FDR)$SYMBOL)
+degenes <- (deseqresult2df(results_IFNg_vs_naive, FDR = FDR)$SYMBOL)
 enrichr_output_macrophage <- enrichr(degenes, dbs)
 
 res_enrich_enrichr_BPs <- shake_enrichrResult(
@@ -301,7 +301,7 @@ To simplify the usage of the function from `GeneTonic`, we create a `GeneTonic_l
 ```{r gtllist, eval = F}
 gtl_macrophage <- GeneTonic_list(
   dds = dds_macrophage,
-  res_de = results_IGNg_vs_naive,
+  res_de = results_IFNg_vs_naive,
   res_enrich = res_enrich,
   annotation_obj = anno_df
 )
