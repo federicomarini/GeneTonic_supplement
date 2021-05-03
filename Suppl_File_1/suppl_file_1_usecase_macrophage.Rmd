@@ -347,7 +347,11 @@ em %>%
     ),
     nodesIdSelection = TRUE
   )
+```
 
+Focusing on individual genesets, we can use `gs_heatmap()` and `gs_volcano()` as in the lines that follow:
+
+```{r graphs2, eval = TRUE}
 gs_heatmap(
   se = vst_macrophage,
   gtl = gtl_macrophage,
@@ -360,21 +364,55 @@ signature_volcano(
   geneset_id = res_enrich$gs_id[1],
   FDR = FDR
 )
+```
+
+If an overview of the affected pathways is desired, one can apply the fuzzy clustering algorithm on the enrichment results, and obtain visual summaries focused on the genesets identified as representative ones of each cluster.
+
+```{r graphs3, eval = TRUE}
+res_enrich_subset <- res_enrich[1:100, ]
+fuzzy_subset <- gs_fuzzyclustering(
+  res_enrich = res_enrich_subset,
+  n_gs = nrow(res_enrich_subset),
+  gs_ids = NULL,
+  similarity_matrix = NULL,
+  similarity_threshold = 0.35,
+  fuzzy_seeding_initial_neighbors = 3,
+  fuzzy_multilinkage_rule = 0.5
+)
+
+# show all genesets members of the first cluster
+DT::datatable(
+  fuzzy_subset[fuzzy_subset$gs_fuzzycluster == "1", ]
+)
+
+# list only the representative clusters
+DT::datatable(
+  fuzzy_subset[fuzzy_subset$gs_cluster_status == "Representative", ]
+)
+```
+
+Let's focus on the top 15 sets identified with the fuzzy clustering.
+
+```{r graphs4, eval = TRUE}
+focus_genesets <- 
+  head(fuzzy_subset$gs_id[fuzzy_subset$gs_cluster_status == "Representative"], 15)
 
 score_mat <- gs_scores(se = vst_macrophage,
                        gtl = gtl_macrophage)
 
 gs_scoresheat(score_mat,
-              n_gs = 40)
+              n_gs = 0,
+              gs_ids = focus_genesets)
 
 gs_mds(
   gtl = gtl_macrophage,
-  n_gs = nrow(gtl_macrophage$res_enrich),
-  mds_labels = 10)
+  n_gs = 200,
+  mds_labels = 0,
+  gs_labels = focus_genesets)
 
 ```
 
-
+More examples on the functions to use and their applications is also included in the other supplemental file, on the A20-deletion in microglia [@Mohebiany2020].
 
 # Session information {-}
 
