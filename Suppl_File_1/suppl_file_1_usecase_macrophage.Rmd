@@ -54,10 +54,10 @@ options(replace.assign = TRUE, width = 80)
 
 # About the data
 
-- Anka: EGAS00001000563
-- Anka: macrophage package
-- Anka: [@Alasoo2018]
-- Anka: link to paper
+The data illustrated in this document is an RNA-seq dataset, available at the European Genome-Phenome archive under the accession code EGAS00001002236 (https://ega-archive.org/studies/EGAS00001002236).
+
+The data is included in the `macrophage` package available on Bioconductor (https://www.bioconductor.org/packages/release/data/experiment/html/macrophage.html). The data was generated as part of the work to identify shared quantitative trait loci (QTLs) for chromatin accessibility and gene expression in human macrophages [@Alasoo2018] - the manuscript is available at https://www.nature.com/articles/s41588-018-0046-7.
+
 
 # Loading required packages
 
@@ -67,17 +67,26 @@ We load the packages required to perform all the analytic steps presented in thi
 library("DESeq2")
 library("topGO")
 library("pheatmap")
-library("org.Mm.eg.db")
+library("org.Hs.eg.db")
 library("pcaExplorer")
 library("ideal")
 library("DT")
 library("GeneTonic")
+library("apeglm")
+library("dplyr")
+library("clusterProfiler")
+library("gprofiler2")
+library("tibble")
+library("fgsea")
+library("msigdbr")
+library("enrichR")
+library("visNetwork")
+library("magrittr")
 ```
 
 # Data processing
 
-- Anka: refer to macrophage package
-- Anka: refer to our vignette as well if you want
+After obtaining the data from the `macrophage` package, we generated a `DESeqDataset` object, provided in this repository. The generation of this object is demonstrated in the `GeneTonic` package vignette available through `browseVignette(GeneTonic)` after successful installation of the package. As in the vignette of `GeneTonic`, we will restrict our intention to the comparison between Interferon gamma treated samples vs naive samples of the `macrophage` package.
 
 ## Exploratory data analyisis
 
@@ -85,12 +94,22 @@ We read in the dataset, apply the vst transformation for performing PCA and crea
 We'll use some functions from the `pcaExplorer` package [@Marini2019].
 
 ```{r eda-macrophage}
-Anka: 
+dds_macrophage <- readRDS("usecase_dds_macrophage.rds")
+dds_macrophage
 
-read in
-rlog/vst
-pca
-heatmap?
+rownames(dds_macrophage) <- substr(rownames(dds_macrophage), 1, 15)
+
+rld_macrophage <- rlogTransformation(dds_macrophage)
+rld_macrophage <- rld_macrophage[, rld_macrophage$condition %in% c("naive", "IFNg")]
+
+
+pheatmap::pheatmap(as.matrix(dist(t(assay(rld_macrophage)))))
+
+pcaExplorer::pcaplot(rld_macrophage,
+                     ntop = 5000,
+                     title = "PCA - top5000 most variable genes",
+                     ellipse = FALSE
+                     )
 ```
 
 ## Differential expression analysis
@@ -99,38 +118,85 @@ We set the False Discovery Rate to 0.01 and we run the `DESeq2` workflow, genera
 We plot the results as an MA-plot and report them in a table, using the functions from the `ideal` package [@Marini2020].
 
 ```{r de-macrophage}
-Anka: 
+anno_df <- readRDS("usecase_annodf_macrophage.rds")
 FDR <- 0.01
-test with increased lfcThreshold, see vignette
-maplot
-DT datatable
 
+dds_macrophage <- DESeq(dds_macrophage)
 
+results_IGNg_vs_naive <- results(dds_macrophage,
+                                 name = "condition_IFNg_vs_naive",
+                                 lfcThreshold = 1,
+                                 alpha = FDR)
+summary(results_IGNg_vs_naive)
 
+results_IGNg_vs_naive$SYMBOL <- anno_df$gene_name[match(rownames(results_IGNg_vs_naive), anno_df$gene_id)]
+
+ideal::plot_ma(results_IGNg_vs_naive, ylim = c(-5, 5), title = "MAplot - INFg vs Naive")
+
+tbl_DEres_IGNg_vs_naive <- deseqresult2df(results_IGNg_vs_naive, FDR = FDR)
+
+DT::datatable(tbl_DEres_IGNg_vs_naive, rownames = FALSE)
 ```
 
 ## Functional enrichment analysis
 
 We perform functional enrichment analysis, here using the `topGOtable` wrapper to the method implemented in the `topGO` package.
 
-- Anka: see backbone from SFile2
-- Anka: main change: organism is human
 
 ```{r enrich-alma, cache=TRUE}
-expressedInAssay <- (rowSums(assay(dds_alma)) > 0)
-geneUniverseExprENS <- rownames(dds_alma)[expressedInAssay]
+expressedInAssay <- (rowSums(assay(dds_macrophage)) > 0)
+geneUniverseExprENS <- rownames(dds_macrophage)[expressedInAssay]
 geneUniverseExpr <- anno_df$gene_name[match(geneUniverseExprENS, anno_df$gene_id)]
 
+GObps_INFg_vs_naive <- topGOtable(
+  DEgenes = tbl_DEres_IGNg_vs_naive$SYMBOL,
+  BGgenes = geneUniverseExpr,
+  ontology = "BP",
+  geneID = "symbol",
+  addGeneToTerms = TRUE,
+  mapping = "org.Hs.eg.db",
+  topTablerows = 500
+)
 
+GOmfs_INFg_vs_naive <- topGOtable(
+  DEgenes = tbl_DEres_IGNg_vs_naive$SYMBOL,
+  BGgenes = geneUniverseExpr,
+  ontology = "MF",
+  geneID = "symbol",
+  addGeneToTerms = TRUE,
+  mapping = "org.Hs.eg.db",
+  topTablerows = 500
+)
 
-res_enrich <- shake_topGOtableResult(GObps_ko_vs_ctrl)
-res_enrich <- get_aggrscores(
-  res_enrich = res_enrich,
-  res_de = res_alma_ko_vs_ctrl,
+GOccs_INFg_vs_naive <- topGOtable(
+  DEgenes = tbl_DEres_IGNg_vs_naive$SYMBOL,
+  BGgenes = geneUniverseExpr,
+  ontology = "CC",
+  geneID = "symbol",
+  addGeneToTerms = TRUE,
+  mapping = "org.Hs.eg.db",
+  topTablerows = 500
+)
+
+res_enrich_macrophage <- shake_topGOtableResult(GObps_INFg_vs_naive)
+res_enrich_macrophage <- get_aggrscores(
+  res_enrich = res_enrich_macrophage,
+  res_de = results_IGNg_vs_naive,
   annotation_obj = anno_df
 )
 
-# saveRDS(res_enrich, file = "usecase_res_enrich_alma.rds")
+
+DT::datatable(res_enrich_macrophage, rownames = FALSE)
+
+
+res_enrich <- shake_topGOtableResult(GObps_INFg_vs_naive)
+res_enrich <- get_aggrscores(
+  res_enrich = res_enrich,
+  res_de = results_IGNg_vs_naive,
+  annotation_obj = anno_df
+)
+
+saveRDS(res_enrich, file = "usecase_res_enrich_macrophage.rds")
 
 DT::datatable(res_enrich, rownames = FALSE)
 ```
@@ -149,27 +215,23 @@ It is possible to use the output of different other methods for enrichment analy
 
 Some examples on how to use them are reported here:
 
-- Anka: "just port the macrophage part over?" + careful naming
-
-```{r, eval=FALSE}
+```{r clusterProfiler}
 # clusterProfiler --------------------------------------------------------------
-library("clusterProfiler")
-degenes_alma <- deseqresult2df(res_alma_ko_vs_ctrl, FDR = 0.05)$id
-ego_alma <- enrichGO(gene          = degenes_alma,
-                     universe      = rownames(dds_alma)[expressedInAssay],
-                     OrgDb         = org.Mm.eg.db,
+degenes_macrophage <- deseqresult2df(results_IGNg_vs_naive, FDR = FDR)$id
+ego_macrophage <- enrichGO(gene          = degenes_macrophage,
+                     universe      = rownames(dds_macrophage)[expressedInAssay],
+                     OrgDb         = org.Hs.eg.db,
                      ont           = "BP",
                      keyType       = 'ENSEMBL',
                      pAdjustMethod = "BH",
                      pvalueCutoff  = 0.01,
                      qvalueCutoff  = 0.05,
                      readable      = TRUE)
-res_enrich_clusterprofiler <- shake_enrichResult(ego_alma)
+res_enrich_clusterprofiler <- shake_enrichResult(ego_macrophage)
 
 # g:profiler -------------------------------------------------------------------
-library("gprofiler2")
-degenes <- deseqresult2df(res_alma_ko_vs_ctrl, FDR = 0.05)$SYMBOL
-gostres_a20 <- gost(
+degenes <- deseqresult2df(results_IGNg_vs_naive, FDR = FDR)$SYMBOL
+gostres_macrophage <- gost(
   query = degenes, 
   ordered_query = FALSE, 
   multi_query = FALSE, 
@@ -184,19 +246,15 @@ gostres_a20 <- gost(
   sources = "GO:BP", 
   as_short_link = FALSE)
 
-res_enrich_gprofiler <- shake_gprofilerResult(gprofiler_output = gostres_a20$result)
+res_enrich_gprofiler <- shake_gprofilerResult(gprofiler_output = gostres_macrophage$result)
 
 # fgsea ------------------------------------------------------------------------
-library("dplyr")
-library("tibble")
-library("fgsea")
-library("msigdbr")
-res2 <- res_alma_ko_vs_ctrl %>%
+res2 <- results_IGNg_vs_naive %>%
   as.data.frame() %>% 
   dplyr::select(SYMBOL, log2FoldChange)
 de_ranks <- deframe(res2)
 head(de_ranks, 20)
-msigdbr_df <- msigdbr(species = "Mus musculus", category = "C5", subcategory = "BP")
+msigdbr_df <- msigdbr(species = "Homo sapiens", category = "C5", subcategory = "BP")
 msigdbr_list = split(x = msigdbr_df$gene_symbol, f = msigdbr_df$gs_name)
 fgseaRes <- fgsea(pathways = msigdbr_list, 
                   stats = de_ranks, 
@@ -207,48 +265,43 @@ fgseaRes <- fgseaRes %>%
 res_enrich_fgsea <- shake_fgseaResult(fgsea_output = fgseaRes)
 
 # enrichr ----------------------------------------------------------------------
-library("enrichR")
 dbs <- c("GO_Molecular_Function_2018",
          "GO_Cellular_Component_2018",
          "GO_Biological_Process_2018",
          "KEGG_2019_Human",
          "Reactome_2016",
          "WikiPathways_2019_Human")
-degenes <- (deseqresult2df(res_alma_ko_vs_ctrl, FDR = 0.05)$SYMBOL)
-enrichr_output_a20 <- enrichr(degenes, dbs)
+degenes <- (deseqresult2df(results_IGNg_vs_naive, FDR = FDR)$SYMBOL)
+enrichr_output_macrophage <- enrichr(degenes, dbs)
 
 res_enrich_enrichr_BPs <- shake_enrichrResult(
-  enrichr_output = enrichr_output_a20$GO_Biological_Process_2018)
+  enrichr_output = enrichr_output_macrophage$GO_Biological_Process_2018)
 res_enrich_enrichr_KEGG <- shake_enrichrResult(
-  enrichr_output = enrichr_output_a20$KEGG_2019_Human)
+  enrichr_output = enrichr_output_macrophage$KEGG_2019_Human)
 ```
 
 ## Assembling the `gtl` object
 
-To simplify the usage of the function from `GeneTonic`, we create a `GeneTonic_list` object
+To simplify the usage of the function from `GeneTonic`, we create a `GeneTonic_list` object.
 
-- Anka: as above, 
-
-```{r}
+```{r gtllist, eval = F}
 gtl_macrophage <- GeneTonic_list(
-  dds = dds_alma,
-  res_de = res_alma_ko_vs_ctrl,
+  dds = dds_macrophage,
+  res_de = results_IGNg_vs_naive,
   res_enrich = res_enrich,
   annotation_obj = anno_df
 )
 
-# saveRDS(gtl_alma, "gtl_alma.rds")
+saveRDS(gtl_macrophage, "gtl_macrophage.rds")
 ```
 
 # Running `GeneTonic` on the dataset
 
 Let's load the `GeneTonicList` object, containing all the structured input needed.
 
-Anka: 
-- from here onwards, let's use gtl_macrophage and use the correct references to that also in text
 
-```{r}
-gtl_alma <- readRDS("gtl_alma.rds")
+```{r, eval = F}
+gtl_macrophage <- readRDS("gtl_macrophage.rds")
 ```
 
 ## `GeneTonic`, interactively
@@ -256,26 +309,22 @@ gtl_alma <- readRDS("gtl_alma.rds")
 This command will launch the `GeneTonic` app:
 
 ```{r eval=FALSE}
-GeneTonic(gtl = gtl_alma)
+GeneTonic(gtl = gtl_macrophage)
 ```
 
 The exploration can be guided by launching the introductory tours for each section of the app, and finally one can generate a small report focused on the features and genesets of interest.
 
-If some more custom visualizations are required, it is possible to export the objects in use from the app as a SummarizedExperiment object, to be then passed to the `iSEE` software [@Rue-Albrecht2018] for further exploration.
+If some more custom visualizations are required, it is possible to export the objects in use from the app as a `SummarizedExperiment` object, to be then passed to the `iSEE` software [@Rue-Albrecht2018] for further exploration.
 
 ## Using `GeneTonic`'s functions in analysis reports 
 
-Anka: 
-- I'd say we take 5-6 plots, and for the rest we refer to the vignette
-
 The functionality of `GeneTonic` can be used also as standalone functions, to be called for example in existing analysis reports in RMarkdown, or R scripts.  
-In the following chunks, we show how it is possible to call some of the functions on the A20-deficient microglia set.
+In the following chunks, we show how it is possible to call some of the functions on the dataset of the `macrophage` package.
 
-```{r}
-em <- enrichment_map(gtl = gtl_alma, n_gs = 100)
+```{r graphs, eval = F}
+em <- enrichment_map(gtl = gtl_macrophage, n_gs = 100)
 
-library("visNetwork")
-library("magrittr")
+
 em %>%
   visIgraph() %>%
   visOptions(
@@ -286,6 +335,27 @@ em %>%
     ),
     nodesIdSelection = TRUE
   )
+
+GeneTonic::gs_heatmap(
+  gtl = gtl_macrophage,
+  geneset_id = res_enrich$gs_id[1],
+  FDR = FDR)
+
+GeneTonic::signature_volcano(
+  gtl = gtl_macrophage,
+  geneset_id = res_enrich$gs_id[1],
+  FDR = FDR
+)
+
+score_mat <- GeneTonic::gs_scores(gtl = gtl_macrophage)
+
+GeneTonic::gs_scoresheat(score_mat)
+
+GeneTonic::gs_mds(
+  gtl = gtl_macrophage,
+  n_gs = nrwo(gtl_macrophage$res_enrich),
+  mds_labels = 10)
+
 ```
 
 
