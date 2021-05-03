@@ -154,12 +154,12 @@ DT::datatable(tbl_DEres_IFNg_vs_naive, rownames = FALSE)
 We perform functional enrichment analysis, here using the `topGOtable` wrapper to the method implemented in the `topGO` package.
 
 
-```{r enrich-alma, cache=TRUE}
+```{r enrich-macro, cache=TRUE}
 expressedInAssay <- (rowSums(assay(dds_macrophage)) > 0)
 geneUniverseExprENS <- rownames(dds_macrophage)[expressedInAssay]
 geneUniverseExpr <- anno_df$gene_name[match(geneUniverseExprENS, anno_df$gene_id)]
 
-GObps_INFg_vs_naive <- topGOtable(
+GObps_IFNg_vs_naive <- topGOtable(
   DEgenes = tbl_DEres_IFNg_vs_naive$SYMBOL,
   BGgenes = geneUniverseExpr,
   ontology = "BP",
@@ -169,7 +169,7 @@ GObps_INFg_vs_naive <- topGOtable(
   topTablerows = 500
 )
 
-GOmfs_INFg_vs_naive <- topGOtable(
+GOmfs_IFNg_vs_naive <- topGOtable(
   DEgenes = tbl_DEres_IFNg_vs_naive$SYMBOL,
   BGgenes = geneUniverseExpr,
   ontology = "MF",
@@ -179,7 +179,7 @@ GOmfs_INFg_vs_naive <- topGOtable(
   topTablerows = 500
 )
 
-GOccs_INFg_vs_naive <- topGOtable(
+GOccs_IFNg_vs_naive <- topGOtable(
   DEgenes = tbl_DEres_IFNg_vs_naive$SYMBOL,
   BGgenes = geneUniverseExpr,
   ontology = "CC",
@@ -189,25 +189,21 @@ GOccs_INFg_vs_naive <- topGOtable(
   topTablerows = 500
 )
 
-res_enrich_macrophage <- shake_topGOtableResult(GObps_INFg_vs_naive)
+res_enrich_macrophage <- shake_topGOtableResult(GObps_IFNg_vs_naive)
 res_enrich_macrophage <- get_aggrscores(
   res_enrich = res_enrich_macrophage,
   res_de = results_IFNg_vs_naive,
   annotation_obj = anno_df
 )
 
-
-DT::datatable(res_enrich_macrophage, rownames = FALSE)
-
-
-res_enrich <- shake_topGOtableResult(GObps_INFg_vs_naive)
+res_enrich <- shake_topGOtableResult(GObps_IFNg_vs_naive)
 res_enrich <- get_aggrscores(
   res_enrich = res_enrich,
   res_de = results_IFNg_vs_naive,
   annotation_obj = anno_df
 )
 
-saveRDS(res_enrich, file = "usecase_res_enrich_macrophage.rds")
+# saveRDS(res_enrich, file = "usecase_res_enrich_macrophage.rds")
 
 DT::datatable(res_enrich, rownames = FALSE)
 ```
