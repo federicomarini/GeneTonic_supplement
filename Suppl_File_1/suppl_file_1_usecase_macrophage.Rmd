@@ -88,6 +88,20 @@ library("magrittr")
 
 After obtaining the data from the `macrophage` package, we generated a `DESeqDataset` object, provided in this repository. The generation of this object is demonstrated in the `GeneTonic` package vignette available through `browseVignette(GeneTonic)` after successful installation of the package. As in the vignette of `GeneTonic`, we will restrict our intention to the comparison between Interferon gamma treated samples vs naive samples of the `macrophage` package.
 
+```{r create_dds, eval=FALSE}
+library("macrophage")
+library("DESeq2")
+
+data("gse", package = "macrophage")
+
+dds_macrophage <- DESeqDataSet(gse, design = ~line + condition)
+# changing the ids to Ensembl instead of the Gencode used in the object
+rownames(dds_macrophage) <- substr(rownames(dds_macrophage), 1, 15)
+dds_macrophage
+
+# saveRDS(dds_macrophage, file = "usecase_dds_macrophage.rds")
+```
+
 ## Exploratory data analyisis
 
 We read in the dataset, apply the vst transformation for performing PCA and creating a heatmap of the sample to sample distances.  
