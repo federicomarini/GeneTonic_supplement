@@ -549,6 +549,32 @@ gs_heatmap(
 )
 ```
 
+### Comparing enrichment results
+
+Imagine we were to compare the enrichment results from our study to another one where the same set of pathways is reported - or alternatively, on the same dataset but focusing on a different contrast.
+We can replicate such a situation by shuffling the results in `res_enrich_a20`, and displaying the comparison with `gs_radar()`, `gs_summary_overview_pair()`, or `gs_horizon()`
+
+```{r}
+# with more than one set
+res_enrich_shuffled <- res_enrich_a20[1:60, ]
+set.seed(42)
+shuffled_ones <- sample(seq_len(60)) # to generate permuted p-values
+res_enrich_shuffled$gs_pvalue <- res_enrich_shuffled$gs_pvalue[shuffled_ones]
+# ideally, I would also permute the z scores and aggregated scores
+gs_radar(res_enrich = res_enrich_a20,
+         res_enrich2 = res_enrich_shuffled)
+
+gs_summary_overview_pair(res_enrich = res_enrich_a20,
+                         res_enrich2 = res_enrich_shuffled,
+                         n_gs = 60)
+
+gs_horizon(res_enrich = res_enrich_a20,
+           compared_res_enrich_list = list(
+             a20_shuffled = res_enrich_shuffled),
+           n_gs = 40
+          )
+```
+
 
 ### Integrated reporting
 
