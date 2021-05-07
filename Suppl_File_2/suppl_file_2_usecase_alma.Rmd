@@ -238,7 +238,6 @@ res2 <- res_alma_ko_vs_ctrl %>%
   as.data.frame() %>%
   dplyr::select(SYMBOL, log2FoldChange)
 de_ranks <- deframe(res2)
-head(de_ranks, 20)
 msigdbr_df <- msigdbr(species = "Mus musculus", category = "C5", subcategory = "BP")
 msigdbr_list <- split(x = msigdbr_df$gene_symbol, f = msigdbr_df$gs_name)
 fgseaRes <- fgsea(
@@ -548,6 +547,32 @@ gs_heatmap(
   cluster_columns = TRUE,
   anno_col_info = "condition"
 )
+```
+
+### Comparing enrichment results
+
+Imagine we were to compare the enrichment results from our study to another one where the same set of pathways is reported - or alternatively, on the same dataset but focusing on a different contrast.
+We can replicate such a situation by shuffling the results in `res_enrich_a20`, and displaying the comparison with `gs_radar()`, `gs_summary_overview_pair()`, or `gs_horizon()`
+
+```{r}
+# with more than one set
+res_enrich_shuffled <- res_enrich_a20[1:60, ]
+set.seed(42)
+shuffled_ones <- sample(seq_len(60)) # to generate permuted p-values
+res_enrich_shuffled$gs_pvalue <- res_enrich_shuffled$gs_pvalue[shuffled_ones]
+# ideally, I would also permute the z scores and aggregated scores
+gs_radar(res_enrich = res_enrich_a20,
+         res_enrich2 = res_enrich_shuffled)
+
+gs_summary_overview_pair(res_enrich = res_enrich_a20,
+                         res_enrich2 = res_enrich_shuffled,
+                         n_gs = 60)
+
+gs_horizon(res_enrich = res_enrich_a20,
+           compared_res_enrich_list = list(
+             a20_shuffled = res_enrich_shuffled),
+           n_gs = 40
+          )
 ```
 
 
