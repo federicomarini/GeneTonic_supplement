@@ -599,6 +599,81 @@ happy_hour(
 ```
 
 
+## Alternate entry point - using `edgeR` for the DE analysis
+
+It is also possible to use `edgeR` to perform the steps before using `GeneTonic`.  
+The chunk below reports an example of how to do so - imagine you start with a `DGE` object called `dge_alma`:
+
+```{r}
+library("DEFormats")
+library("edgeR")
+dge_alma <- as.DGEList(readRDS("usecase_dds_alma.rds"))
+```
+
+We add the gene symbols for ease of readability... 
+
+```{r}
+dge_alma$genes$SYMBOL <- anno_df$gene_name[match(rownames(dge_alma$genes), anno_df$gene_id)]
+```
+
+... and perform a QL-based analysis, obtaining the `qlf` object at the end of it.
+
+```{r}
+keep <- filterByExpr(dge_alma)
+table(keep)
+y <- dge_alma[keep, , keep.lib.sizes = FALSE]
+y <- calcNormFactors(y)
+conds <- dge_alma$samples$group
+design <- model.matrix(~conds)
+y <- estimateDisp(y, design)
+# To perform quasi-likelihood F-tests:
+fit <- glmQLFit(y, design)
+qlf <- glmQLFTest(fit, coef = "condsko_del")
+plotMD(qlf)
+```
+
+We would need to convert these objects back to the `DESeq2`-based objects.
+
+```{r}
+convert_to_DESeqResults <- function(dgelrt, dge, FDR = 0.05) {
+  tbledger <- as.data.frame(topTags(dgelrt, n = Inf))
+  colnames(tbledger)[colnames(tbledger) == "PValue"] <- "pvalue"
+  colnames(tbledger)[colnames(tbledger) == "logFC"] <- "log2FoldChange"
+  colnames(tbledger)[colnames(tbledger) == "logCPM"] <- "baseMean"
+  colnames(tbledger)[colnames(tbledger) == "SYMBOL"] <- "SYMBOL"
+  
+  # get from the logCPM to something on the scale of the baseMean
+  tbledger$baseMean <- (2^tbledger$baseMean) * mean(dge$samples$lib.size) / 1e6
+  
+  # use the constructor for DESeqResults
+  edger_resu <- DESeqResults(DataFrame(tbledger))
+  edger_resu <- DESeq2:::pvalueAdjustment(edger_resu,
+    independentFiltering = FALSE,
+    alpha = FDR, pAdjustMethod = "BH"
+  )
+}
+
+res_de_from_edgeR <- convert_to_DESeqResults(qlf, dge_alma)
+
+summary(decideTestsDGE(qlf))
+summary(res_de_from_edgeR, alpha = 0.05)
+
+dds_alma_from_edgeR <- as.DESeqDataSet(dge_alma)
+```
+
+Imagine we have already our `res_enrich` object, obtained in any of the ways specified above - then we can simply launch `GeneTonic` with
+
+```{r, eval=FALSE}
+gtl_from_edgeR <- GeneTonic_list(
+  dds = dds_alma_from_edgeR,
+  res_de = res_de_from_edgeR,
+  res_enrich = res_enrich_clusterprofiler,
+  annotation_obj = anno_df
+)
+GeneTonic(gtl = gtl_from_edgeR)
+```
+
+
 
 # Session information {-}
 
