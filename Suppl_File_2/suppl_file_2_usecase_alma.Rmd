@@ -661,7 +661,7 @@ summary(res_de_from_edgeR, alpha = 0.05)
 dds_alma_from_edgeR <- as.DESeqDataSet(dge_alma)
 ```
 
-Imagine we have already our `res_enrich` object, obtained in any of the ways specified above - then we can simply launch `GeneTonic` with
+Imagine we have already our `res_enrich` object, obtained in any of the ways specified above - then we can simply launch `GeneTonic` with these commands (utilizing the `anno_df` object from the examples above):
 
 ```{r, eval=FALSE}
 gtl_from_edgeR <- GeneTonic_list(
