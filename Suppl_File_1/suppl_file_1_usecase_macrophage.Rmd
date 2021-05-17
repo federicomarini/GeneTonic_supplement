@@ -1,6 +1,6 @@
 ---
 title: >
-  Using GeneTonic on the macrophage dataset (EGAS00001002236)
+  Using GeneTonic on the macrophage dataset (ERP020977)
 author:
 - name: Federico Marini
   affiliation: 
@@ -54,7 +54,7 @@ options(replace.assign = TRUE, width = 80)
 
 # About the data
 
-The data illustrated in this document is an RNA-seq dataset, available at the European Genome-Phenome archive under the accession code EGAS00001002236 (https://ega-archive.org/studies/EGAS00001002236).
+The data illustrated in this document is an RNA-seq dataset, available at the European Nucleotide Archive under the accession code ERP020977 (https://www.ebi.ac.uk/ena/browser/view/ERP020977).
 
 The data is included in the `macrophage` package available on Bioconductor (https://www.bioconductor.org/packages/release/data/experiment/html/macrophage.html). The data was generated as part of the work to identify shared quantitative trait loci (QTLs) for chromatin accessibility and gene expression in human macrophages [@Alasoo2018] - the manuscript is available at https://www.nature.com/articles/s41588-018-0046-7.
 
