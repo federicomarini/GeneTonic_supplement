@@ -76,7 +76,7 @@ library("GeneTonic")
 
 After obtaining a count matrix (via STAR and featureCounts), we generated a `DESeqDataset` object, provided in this repository for the ease of reproducing the presented analyses.
 
-## Exploratory data analyisis
+## Exploratory data analysis
 
 We read in the dataset, apply the rlog transformation for performing PCA and creating a heatmap of the sample to sample distances.  
 We'll use some functions from the `pcaExplorer` package [@Marini2019] (see also Supplementary Figure 3 of [@Mohebiany2020]).

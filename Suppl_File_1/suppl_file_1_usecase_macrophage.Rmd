@@ -102,7 +102,7 @@ dds_macrophage
 # saveRDS(dds_macrophage, file = "usecase_dds_macrophage.rds")
 ```
 
-## Exploratory data analyisis
+## Exploratory data analysis
 
 We read in the dataset, apply the vst transformation for performing PCA and creating a heatmap of the sample to sample distances.  
 We'll use some functions from the `pcaExplorer` package [@Marini2019].
