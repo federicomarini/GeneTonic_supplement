@@ -10,6 +10,7 @@ author:
 - name: Annekathrin Ludt
   affiliation: 
   - *id1
+  email: anneludt@uni-mainz.de
 - name: Jan Linke
   affiliation: 
   - *id1
@@ -47,7 +48,7 @@ div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 20px;}
 
 <br><br><br>
 
-## Table S1: Additional File 1
+## Additional File 1: Table S1
 
 Table S1 contains the comparison of tools for assisting the intepretation of transcriptome data via functional enrichment analyses.
 
@@ -56,8 +57,8 @@ The explanations for the assessment criteria are provided below.
 <br><br>
 
 ```{r}
-library(DT)
-library(magrittr)
+library("DT")
+library("magrittr")
 s1 <- readxl::read_xlsx("s1table.xlsx")
 s1_key <- readxl::read_xlsx("s1table_key.xlsx")
 ```

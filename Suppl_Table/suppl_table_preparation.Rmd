@@ -12,6 +12,7 @@ author:
 - name: Annekathrin Ludt
   affiliation: 
   - *id1
+  email: anneludt@uni-mainz.de
 - name: Jan Linke
   affiliation: 
   - *id1
@@ -49,7 +50,7 @@ The information on the software comparison is available online at https://docs.g
 Reading in the data from the Google Sheet...
 
 ```{r}
-library(googlesheets4)
+library("googlesheets4")
 options(gargle_oauth_email = "fede.maro@gmail.com")
 gs4_auth()
 # sheets_auth(token = drive_token())
