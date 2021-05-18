@@ -50,7 +50,7 @@ div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 20px;}
 
 ## Additional File 1: Table S1
 
-Table S1 contains the comparison of tools for assisting the intepretation of transcriptome data via functional enrichment analyses.
+Table S1 contains the comparison of tools for assisting the interpretation of transcriptome data via functional enrichment analyses.
 
 The explanations for the assessment criteria are provided below.
 
