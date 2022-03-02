@@ -122,7 +122,7 @@ knitr::kable(s1_key)
 The content of this document has been generated based on the code available at the repository
 https://github.com/federicomarini/GeneTonic_supplement.
 
-The information in the tables above are extracted from a Google Sheet, available at https://docs.google.com/spreadsheets/d/167XV0w18P0FSld1dt6owN4C2Esxl5FU2QTo4D-wclz0/edit?usp=sharing.
+The information in the tables above are extracted from a Google Sheet, available at https://docs.google.com/spreadsheets/d/1EQD8gNk6NID_8CJ-xetQm31XB4eRCXIsvVd4X0oaoPo/edit?usp=sharing.
 
 The last update to the Sheet (and to this document) has been done on `r Sys.Date()`.
 
